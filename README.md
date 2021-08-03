@@ -59,6 +59,14 @@ foreach (var key in kc.GetKeys())
 {
     ...
 }
+
+
+// Iteration all items
+foreach (var item in kc.All())
+{
+    // item.Key
+    // item.Value
+}
     
 
 // Close then collection
