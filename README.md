@@ -20,11 +20,12 @@ KVCollection is a small, fast and lightweight .NET Key-Value Collection.
 A quick example for storing and searching documents:
 
 ```C#
-// Create your POCO class
+// Create an instance
 var kc =  new KeyValue.Collection();
 
-// Get customer "test""
+// Get "test" collection. If not exists then will be created.
 kc.Open("test");
+
 
 // Insert new 100K items
 for (int i = 1; i < 100000; i++)
@@ -44,10 +45,11 @@ kc.Delete("Key-50000");
 
 
 // Insert/Update an item inside a collection
-kc.Update("Key-XXX", "value of XXX");
+kc.Upsert("Key-XXX", "value of XXX");
 
 // Delete all items
 kc.Truncate();
+
 
 var count = kc.Count;
 
