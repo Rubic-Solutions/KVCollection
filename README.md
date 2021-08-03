@@ -61,7 +61,6 @@ foreach (var key in kc.GetKeys)
 
 // Close then collection
 kc.Close();
-}
 ```
 
 
