@@ -31,6 +31,8 @@ kc.Open("test");
 for (int i = 1; i < 100000; i++)
     kc.Add("Key-" + i, "This is the content for Key-" + i);
 
+    
+var count = kc.Count;
 
 // get value for "Key-50000"
 var item = kc.Get("Key-50000");
@@ -47,15 +49,13 @@ kc.Delete("Key-50000");
 // Insert/Update an item inside a collection
 kc.Upsert("Key-XXX", "value of XXX");
 
+
 // Delete all items
 kc.Truncate();
 
 
-var count = kc.Count;
-
-
 // Iteration all keys
-foreach (var key in kc.GetKeys)
+foreach (var key in kc.GetKeys())
 {
     ...
 }
