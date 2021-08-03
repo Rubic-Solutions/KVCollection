@@ -172,6 +172,18 @@ namespace KeyValue
             foreach (var header in this.cache.Items())
                 yield return header.Key;
         }
+
+        public IEnumerable<KeyValuePair<string, string>> All()
+        {
+            foreach (var header in this.cache.Items())
+            {
+                var bytes = readRowValue(header);
+                string val = (bytes == null || bytes.Length == 0) ? default : enc.GetString(bytes);
+
+                yield return new KeyValuePair<string,string>(header.Key, val);
+                //yield return KeyValuePair.Create(header.Key, val);
+            }
+        }
         #endregion
 
         #region "private methods"

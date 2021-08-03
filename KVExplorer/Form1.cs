@@ -13,7 +13,7 @@ namespace KVExplorer
     {
         private static string exe_path = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
-        private KeyValue.Collection kvFile =  new KeyValue.Collection();
+        private KeyValue.Collection kvFile = new KeyValue.Collection();
 
 
         private readonly DataTable DGRID_LIST_SOURCE = new DataTable();
@@ -46,10 +46,10 @@ namespace KVExplorer
             EDIT_KEY.Text = string.Empty;
             EDIT_VALUE.Text = string.Empty;
 
-            KV_FILENAME.Text = fullFileName;
+            this.Text = "KV Explorer - " + fullFileName;
             var result = await DoWork(() =>
             {
-                kvFile.Open(KV_FILENAME.Text);
+                kvFile.Open(fullFileName);
                 SetItem(-1);
             }, "File is being loaded.");
 
@@ -76,21 +76,22 @@ namespace KVExplorer
             return result.Success;
         }
 
-        private async void button1_Click_1(object sender, EventArgs e)
+        private async void button1_Click(object sender, EventArgs e)
         {
             if (DIALOG_SAVE.ShowDialog() == DialogResult.OK)
                 if (await file_set(DIALOG_SAVE.FileName) == false)
                     return;
         }
 
-        private void button3_Click(object sender, EventArgs e)
+        private void button3_Click_1(object sender, EventArgs e)
         {
+            this.Text = "KV Explorer";
             kvFile.Close();
             DGRID_LIST_SOURCE.Clear();
             DGRID_SEL_INX = -1;
             SetItem(-1);
         }
-        private async void button2_Click(object sender, EventArgs e)
+        private async void button2_Click_1(object sender, EventArgs e)
         {
             if (DIALOG_SAVE.ShowDialog() == DialogResult.OK)
                 if (await file_set(DIALOG_SAVE.FileName) == false)
@@ -145,7 +146,7 @@ namespace KVExplorer
         {
             EDIT_KEY.Text = string.Empty;
             EDIT_VALUE.Text = string.Empty;
-            EDIT_ELAPSED.Text = "Elapsed : 0";
+            EDIT_VALUE_LEN.Text = "(Length = 0,  Elapsed = 0)";
 
             DGRID_SEL_INX = SelIndex;
             EDIT_KEY.ReadOnly = this.EDIT_IS_EDIT;
@@ -155,11 +156,15 @@ namespace KVExplorer
             {
                 EDIT_KEY.Text = (string)DGRID_LIST.Rows[SelIndex].Cells[0].Value;
 
+                string data = null;
                 var result = await DoWork(() =>
                 {
-                    EDIT_VALUE.Text = kvFile.Get(EDIT_KEY.Text);
+                    data = kvFile.Get(EDIT_KEY.Text);
                 }, null);
-                EDIT_ELAPSED.Text = "Elapsed : " + result.Duration.TotalSeconds.ToString();
+                EDIT_VALUE.Text = data;
+                EDIT_VALUE_LEN.Text = String.Format("(Length = {0},  Elapsed = {1})",
+                                                        data.Length.ToString("#,##0"),
+                                                        result.Duration.ToString(@"ss\.fffffff"));
             }
 
             EDIT_BTN_NEW.Enabled = (kvFile.FileInfo is object);
@@ -252,8 +257,8 @@ namespace KVExplorer
                         MessageAdd("ERROR:" + ex.Message + " (" + sw.Elapsed.ToString() + ")");
                     }
                     MESSAGE_LIST.SelectedIndex = MESSAGE_LIST.Items.Count - 1;
-                    retval.Duration = sw.Elapsed;
                     sw.Stop();
+                    retval.Duration = sw.Elapsed;
                     //---------------------------------------
                     Cursor.Current = Cursors.Default;
                     Application.DoEvents();
@@ -262,6 +267,5 @@ namespace KVExplorer
             return retval;
         }
         #endregion
-
     }
 }
