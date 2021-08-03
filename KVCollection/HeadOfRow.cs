@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace KeyValueFile
+namespace KeyValue
 {
     internal class HeadOfRow : Head<HeadOfRow>
     {

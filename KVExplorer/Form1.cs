@@ -13,7 +13,7 @@ namespace KVExplorer
     {
         private static string exe_path = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
-        private KeyValueFile.Collection kvFile =  new KeyValueFile.Collection();
+        private KeyValue.Collection kvFile =  new KeyValue.Collection();
 
 
         private readonly DataTable DGRID_LIST_SOURCE = new DataTable();

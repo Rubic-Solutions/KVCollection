@@ -2,7 +2,8 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-namespace KeyValueFile
+
+namespace KeyValue
 {
     internal class CollectionWriter
     {

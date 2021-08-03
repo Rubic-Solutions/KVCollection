@@ -5,7 +5,12 @@ VisualStudioVersion = 16.0.30804.86
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KVCollection", "KVCollection\KVCollection.csproj", "{EB941A40-744D-43BB-8068-15CAF00BA775}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KVExplorer", "KVExplorer\KVExplorer.csproj", "{2F014E09-5D12-4148-A3A0-4279B427CA10}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KVExplorer", "KVExplorer\KVExplorer.csproj", "{2F014E09-5D12-4148-A3A0-4279B427CA10}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{0E2E5EC9-39C7-4E64-98AD-18FBBF551718}"
+	ProjectSection(SolutionItems) = preProject
+		README.md = README.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

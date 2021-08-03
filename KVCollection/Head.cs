@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace KeyValueFile
+namespace KeyValue
 {
     internal abstract class Head<T>
     {
