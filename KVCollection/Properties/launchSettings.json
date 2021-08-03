@@ -1,0 +1,14 @@
+﻿{
+  "profiles": {
+    "console": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    "Docker": {
+      "commandName": "Docker",
+    }
+  }
+}

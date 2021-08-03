@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30804.86
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KVCollection", "KVCollection\KVCollection.csproj", "{EB941A40-744D-43BB-8068-15CAF00BA775}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KVExplorer", "KVExplorer\KVExplorer.csproj", "{2F014E09-5D12-4148-A3A0-4279B427CA10}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{EB941A40-744D-43BB-8068-15CAF00BA775}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EB941A40-744D-43BB-8068-15CAF00BA775}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EB941A40-744D-43BB-8068-15CAF00BA775}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EB941A40-744D-43BB-8068-15CAF00BA775}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2F014E09-5D12-4148-A3A0-4279B427CA10}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2F014E09-5D12-4148-A3A0-4279B427CA10}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2F014E09-5D12-4148-A3A0-4279B427CA10}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2F014E09-5D12-4148-A3A0-4279B427CA10}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {69A9FB40-EC81-4A6B-BA0C-1730173AAA63}
+	EndGlobalSection
+EndGlobal
