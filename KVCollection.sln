@@ -10,7 +10,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{0E2E5EC9-39C7-4E64-98AD-18FBBF551718}"
 	ProjectSection(SolutionItems) = preProject
 		README.md = README.md
-		..\..\..\Users\serka\Desktop\UI.png = ..\..\..\Users\serka\Desktop\UI.png
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test", "Test\Test.csproj", "{3E5CC6A3-9DC9-4926-9773-7E680F45BB08}"
