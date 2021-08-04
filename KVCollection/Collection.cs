@@ -5,7 +5,7 @@ using System.IO;
 
 namespace KeyValue
 {
-    public class Collection
+    public class Collection:IDisposable     
     {
         [DebuggerBrowsable(DebuggerBrowsableState.Never)] private static object lock_ctor = new object();
 
@@ -26,6 +26,8 @@ namespace KeyValue
             cws = new Dictionary<string, CollectionWriter>();
             caches = new Dictionary<string, CacheOfHeaders>();
         }
+
+        public void Dispose() => Close();
 
         #region "Open/Close"
         public System.IO.FileInfo FileInfo => this.fs_info;
