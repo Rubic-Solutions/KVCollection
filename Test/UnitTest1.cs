@@ -36,7 +36,7 @@ namespace Test
         public void TestThreadSafe()
         {
             Console.WriteLine("Test thread-safe.");
-            void fn(int number)
+            static void fn(int number)
             {
                 using (var kc = new KeyValue.Collection())
                 {
@@ -44,10 +44,19 @@ namespace Test
                     Console.WriteLine("File is opened.");
 
                     for (int i = 0; i < 50; i++)
+                    {
                         kc.Add("task-" + number + "-key-" + i, "task-" + number + "-value-" + i);
+                        Task.Delay(100).GetAwaiter().GetResult();
+                    }
 
                     Console.WriteLine("50 items has been inserted.");
                 }
+            }
+
+            using (var kc = new KeyValue.Collection())
+            {
+                kc.Open("test");
+                kc.Truncate();
             }
 
             var tasks = new List<Task>();
