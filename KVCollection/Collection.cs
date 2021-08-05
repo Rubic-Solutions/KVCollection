@@ -159,6 +159,8 @@ namespace KeyValue
                     update(fileHeader, rowHeader, enc.GetBytes(Value));
             });
 
+        public bool Exists(string Key) => this.cache?.Exists(Key) ?? false;
+
         public string Get(string Key)
         {
             if (IsOpen == false) return null;
@@ -269,7 +271,8 @@ namespace KeyValue
         {
             if (rowHeader == null) return;
 
-            // if there is a next record and also new value is longer than old value, then delete old record and insert as new.
+            // if there is a next record and also new value is longer than old value,
+            // then delete old record and insert as new.
             if (value.Length > rowHeader.RowLength && rowHeader.NextPos != 0)
             {
                 delete(fileHeader, rowHeader);
@@ -277,6 +280,22 @@ namespace KeyValue
             }
             else
             {
+                // has data been changed ?
+                var has_changed = rowHeader.ValueLength != value.Length;
+                if (!has_changed)
+                {
+                    var old_value = readRowValue(rowHeader);
+                    for (int i = 0; i < value.Length; i++)
+                    {
+                        if (value[i] != old_value[i])
+                        {
+                            has_changed = true;
+                            break;
+                        }
+                    }
+                }
+                if (!has_changed) return;
+
                 rowHeader.ValueLength = value.Length;
                 writeRowHeader(rowHeader);
                 writeRowValue(rowHeader, value);

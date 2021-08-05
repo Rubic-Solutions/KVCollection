@@ -358,7 +358,7 @@ namespace KVExplorer
             // 
             this.EDIT_KEY.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.EDIT_KEY.BackColor = System.Drawing.SystemColors.Control;
+            this.EDIT_KEY.BackColor = System.Drawing.Color.FloralWhite;
             this.EDIT_KEY.Cursor = System.Windows.Forms.Cursors.Default;
             this.EDIT_KEY.Location = new System.Drawing.Point(13, 81);
             this.EDIT_KEY.Name = "EDIT_KEY";
@@ -371,7 +371,7 @@ namespace KVExplorer
             this.EDIT_VALUE.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.EDIT_VALUE.BackColor = System.Drawing.SystemColors.Control;
+            this.EDIT_VALUE.BackColor = System.Drawing.Color.FloralWhite;
             this.EDIT_VALUE.CausesValidation = false;
             this.EDIT_VALUE.Cursor = System.Windows.Forms.Cursors.Default;
             this.EDIT_VALUE.Location = new System.Drawing.Point(13, 144);
