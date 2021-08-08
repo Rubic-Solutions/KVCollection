@@ -2,12 +2,13 @@
 
 namespace KeyValue
 {
-    internal abstract class Head<T>
+    public abstract class Head<T>
     {
-        public long Pos;
-        public abstract int Size { get; }
-        public abstract byte[] ToArray();
-        public abstract bool FromArray(byte[] data);
+        internal long Pos;
+        internal abstract int Size { get; }
+
+        internal abstract byte[] ToArray();
+        internal abstract bool FromArray(byte[] data);
 
         protected byte[] SerializeBytes(params byte[][] datas)
         {

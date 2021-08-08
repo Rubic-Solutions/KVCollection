@@ -1,35 +1,48 @@
 ﻿using System;
+using System.Diagnostics;
 
 namespace KeyValue
 {
-    internal class HeadOfRow : Head<HeadOfRow>
+    public class HeadOfRow : Head<HeadOfRow>
     {
-        public const int KeyLength = 32;
-        public string Key;
+        public string PrimaryKey => Keys[0];
+        public string Key2 => Keys[1];
+        public string Key3 => Keys[2];
+        public string Key4 => Keys[3];
+        public string Key5 => Keys[4];
 
-        public long PrevPos;
-        public long NextPos;
-
+        internal long PrevPos;
+        internal long NextPos;
         /// <summary>Actual value length of the row</summary>
-        public int ValueLength;
+        internal int ValueLength;
         /// <summary>max value length of the row</summary>
-        public int RowLength;
+        internal int RowLength;
+        internal string[] Keys = new string[5];
 
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)] private const int adr_length = 8 + 8 + 4 + 4;
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)] private const int key_length = ((5 * 32) + 4);
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)] private const int full_length = adr_length + key_length;
 
-        public override int Size => 8 + 8 + 4 + 4 + KeyLength; // ToArray().Length;
-        public override byte[] ToArray() =>
-            base.SerializeBytes(BitConverter.GetBytes(PrevPos),
-                                BitConverter.GetBytes(NextPos),
-                                BitConverter.GetBytes(ValueLength),
-                                BitConverter.GetBytes(RowLength),
-                                System.Text.Encoding.UTF8.GetBytes(Key));
-
-        /// PrevPos(8)    NextPos(8)    ValueLength(4)    RowLength(4)    Key(32)
+        internal override int Size => full_length;
+        internal override byte[] ToArray()
+        {
+            var retval = base.SerializeBytes(BitConverter.GetBytes(PrevPos),
+                                             BitConverter.GetBytes(NextPos),
+                                             BitConverter.GetBytes(ValueLength),
+                                             BitConverter.GetBytes(RowLength),
+                                             System.Text.Encoding.UTF8.GetBytes(PrimaryKey + "," +
+                                                               Key2 + "," +
+                                                               Key3 + "," +
+                                                               Key4 + "," +
+                                                               Key5));
+            return retval;
+        }
+        /// PrevPos(8)    NextPos(8)    ValueLength(4)    RowLength(4)    Key [1-5]
         /// -----------   -----------   ---------------   -------------   ----------- 
-        /// 00 ... 07     08 ... 15     16 ... 19         20 ... 23       24 ... 55
-        
+        /// 00 ... 07     08 ... 15     16 ... 19         20 ... 23       24 ... nnn
 
-        public override bool FromArray(byte[] data)
+
+        internal override bool FromArray(byte[] data)
         {
             if (data == null || data.Length == 0) return true;
 
@@ -38,9 +51,9 @@ namespace KeyValue
             this.ValueLength = BitConverter.ToInt32(data, 16);
             this.RowLength = BitConverter.ToInt32(data, 20);
 
-            var key_bytes = new byte[KeyLength];
-            Array.Copy(data, 24, key_bytes, 0, KeyLength);
-            this.Key = System.Text.Encoding.UTF8.GetString(key_bytes).TrimEnd(new char[] { (char)0 });
+            var key_bytes = new byte[key_length];
+            Array.Copy(data, adr_length, key_bytes, 0, key_length);
+            Keys = System.Text.Encoding.UTF8.GetString(key_bytes).Split(',');
             return true;
         }
     }

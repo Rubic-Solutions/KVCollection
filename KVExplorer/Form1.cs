@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -43,7 +44,7 @@ namespace KVExplorer
             if (string.IsNullOrEmpty(fullFileName)) return false;
 
             MESSAGE_LIST.Items.Add(string.Empty);
-            EDIT_KEY.Text = string.Empty;
+            EDIT_KEY1.Text = string.Empty;
             EDIT_VALUE.Text = string.Empty;
 
             this.Text = "KV Explorer - " + fullFileName;
@@ -51,6 +52,9 @@ namespace KVExplorer
             {
                 kvFile.Open(fullFileName);
                 SetItem(-1);
+                BTN_CLOSE.Visible = true;
+                BTN_OPEN.Visible = false;
+                BTN_TEST.Visible = false;
             }, "File is being loaded.");
 
             return result.Success && await loadKeys();
@@ -71,51 +75,92 @@ namespace KVExplorer
                     DGRID_LIST_SOURCE.Rows.Add(item);
                 }
                 DGRID_LIST_SOURCE.EndLoadData();
-            }, "Keys are being loaded.");
+            }, "Keys are being listed.");
             MessageAdd("\tCount = " + DGRID_LIST_SOURCE.Rows.Count);
             return result.Success;
         }
 
-        private async void button1_Click(object sender, EventArgs e)
+        private async void BTN_OPEN_Click(object sender, EventArgs e)
         {
             if (DIALOG_SAVE.ShowDialog() == DialogResult.OK)
                 if (await file_set(DIALOG_SAVE.FileName) == false)
                     return;
         }
 
-        private void button3_Click_1(object sender, EventArgs e)
+        private void BTN_CLOSE_Click(object sender, EventArgs e)
         {
             this.Text = "KV Explorer";
             kvFile.Close();
             DGRID_LIST_SOURCE.Clear();
             DGRID_SEL_INX = -1;
             SetItem(-1);
+            BTN_CLOSE.Visible = false;
+            BTN_OPEN.Visible = true;
+            BTN_TEST.Visible = true;
         }
-        private async void button2_Click_1(object sender, EventArgs e)
+        private async void BTN_TEST_Click(object sender, EventArgs e)
         {
             if (DIALOG_SAVE.ShowDialog() == DialogResult.OK)
                 if (await file_set(DIALOG_SAVE.FileName) == false)
                     return;
 
-            var result = await DoWork(() =>
-             {
-                 kvFile.Truncate();
-             }, "File is being truncated.");
-            if (result.Success == false) return;
+            DoWorkResult result = null;
 
+            //result = await DoWork(() =>
+            // {
+            //     kvFile.Truncate();
+            // }, "File is being truncated.");
+            //if (result.Success == false) return;
+
+
+            //result = await DoWork(() =>
+            //{
+            //    for (int i = 1; i < 1000000; i++)
+            //    {
+            //        var item = new testModel();
+            //        item.Name = "Person " + i;
+            //        item.Age = ((i % 90) + 1) + 10;
+            //        item.BirtDate = new DateTime(DateTime.Now.Year - item.Age, (i % 12) + 1, 1);
+            //        item.IsAdult = item.Age > 18;
+
+            //        kvFile.Add("Key-" + i, JsonSerializer.Serialize(item, json_opt),
+            //                        item.IsAdult ? "Y" : "N",
+            //                        item.BirtDate.Ticks.ToString());
+            //    }
+            //}, "Sample records are being generated.");
+            //if (result.Success == false) return;
+            //await loadKeys();
+
+            var adult_count = 0;
+            var dt = DateTime.Now.AddYears(-30).Ticks;
             result = await DoWork(() =>
             {
-                for (int i = 1; i < 100000; i++)
+                adult_count = kvFile.FindAll(x =>
                 {
-                    kvFile.Add("Key-" + i, ".üğişçöÜĞİŞÇÖıI");
-                }
-            }, "Sample records are being generated.");
-            if (result.Success == false) return;
+                    //return string.Compare(x.PrimaryKey, "Key-250000") == 1;
+                    return x.Key2 == "Y" && long.Parse(x.Key3) > dt;
+                }).Count();
+                //foreach (var item in kvFile.GetKeys())
+                //{
+                //    if (string.Compare(item, "Key-250000") == 1)
+                //        adult_count++;
+                //    //var obj = JsonSerializer.Deserialize<testModel>(item.Value, json_opt);
+                //    //if (obj.IsAdult)
+                //    //    adult_count++;
+                //}
+            }, "Filter applied.");
+            MessageAdd("\tTotal " + adult_count + " adult(s) found.");
 
-            await loadKeys();
+            if (result.Success == false) return;
         }
 
-
+        private class testModel
+        {
+            public string Name;
+            public int Age;
+            public DateTime BirtDate;
+            public bool IsAdult;
+        }
         //sw.Restart();
         //System.Diagnostics.Debug.Print("Count = " + KeyValueFile.Count() + " (" + sw.Elapsed.ToString() + ")");
 
@@ -144,27 +189,36 @@ namespace KVExplorer
         private bool EDIT_IS_EDIT => (DGRID_SEL_INX != -1);
         private async void SetItem(int SelIndex)
         {
-            EDIT_KEY.Text = string.Empty;
+            EDIT_KEY1.Text = string.Empty;
+            EDIT_KEY2.Text = string.Empty;
+            EDIT_KEY3.Text = string.Empty;
+            EDIT_KEY4.Text = string.Empty;
+            EDIT_KEY5.Text = string.Empty;
             EDIT_VALUE.Text = string.Empty;
             EDIT_VALUE_LEN.Text = "(Length = 0,  Elapsed = 0)";
 
             DGRID_SEL_INX = SelIndex;
-            EDIT_KEY.ReadOnly = this.EDIT_IS_EDIT;
+            EDIT_KEY1.ReadOnly = this.EDIT_IS_EDIT;
             EDIT_VALUE.ReadOnly = false;
 
             if (this.EDIT_IS_EDIT)
             {
-                EDIT_KEY.Text = (string)DGRID_LIST.Rows[SelIndex].Cells[0].Value;
+                EDIT_KEY1.Text = (string)DGRID_LIST.Rows[SelIndex].Cells[0].Value;
 
+                string[] keys = null;
                 string data = null;
                 var result = await DoWork(() =>
                 {
-                    data = kvFile.Get(EDIT_KEY.Text);
+                    data = kvFile.Get(EDIT_KEY1.Text, out keys);
                 }, null);
                 EDIT_VALUE.Text = data;
                 EDIT_VALUE_LEN.Text = String.Format("(Length = {0},  Elapsed = {1})",
-                                                        data.Length.ToString("#,##0"),
+                                                        (data?.Length ?? 0).ToString("#,##0"),
                                                         result.Duration.ToString(@"ss\.fffffff"));
+                if (keys.Length > 1) EDIT_KEY2.Text = keys[1];
+                if (keys.Length > 2) EDIT_KEY3.Text = keys[2];
+                if (keys.Length > 3) EDIT_KEY4.Text = keys[3];
+                if (keys.Length > 4) EDIT_KEY5.Text = keys[4];
             }
 
             EDIT_BTN_NEW.Enabled = (kvFile.FileInfo is object);
@@ -192,26 +246,26 @@ namespace KVExplorer
             if (this.EDIT_IS_NEW)
                 await DoWork(() =>
                 {
-                    kvFile.Add(EDIT_KEY.Text, EDIT_VALUE.Text);
-                    DGRID_LIST_SOURCE.Rows.Add(EDIT_KEY.Text);
+                    kvFile.Add(EDIT_KEY1.Text, EDIT_VALUE.Text);
+                    DGRID_LIST_SOURCE.Rows.Add(EDIT_KEY1.Text);
                     Application.DoEvents();
 
                     DGRID_LIST.Rows[DGRID_LIST.Rows.GetLastRow(DataGridViewElementStates.Displayed)].Selected = true;
-                }, "Record has been added. (KEY = " + EDIT_KEY.Text + ")");
+                }, "Record has been added. (KEY = " + EDIT_KEY1.Text + ")");
             else
                 await DoWork(() =>
                 {
-                    kvFile.Update(EDIT_KEY.Text, EDIT_VALUE.Text);
-                }, "Record has been updated. (KEY = " + EDIT_KEY.Text + ")");
+                    kvFile.Update(EDIT_KEY1.Text, EDIT_VALUE.Text);
+                }, "Record has been updated. (KEY = " + EDIT_KEY1.Text + ")");
         }
         private async void EDIT_BTN_CNL_Click(object sender, EventArgs e)
         {
             if (DGRID_SEL_INX == -1) return;
             await DoWork(() =>
             {
-                kvFile.Delete(EDIT_KEY.Text);
+                kvFile.Delete(EDIT_KEY1.Text);
                 DGRID_LIST_SOURCE.Rows.RemoveAt(DGRID_SEL_INX);
-            }, "Record has been deleted. (KEY = " + EDIT_KEY.Text + ")");
+            }, "Record has been deleted. (KEY = " + EDIT_KEY1.Text + ")");
         }
         #endregion
 

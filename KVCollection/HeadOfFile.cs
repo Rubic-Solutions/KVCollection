@@ -4,7 +4,7 @@ namespace KeyValue
 {
     internal class HeadOfFile : Head<HeadOfFile>
     {
-        public  string Prefix => "KV";
+        public string Prefix => "KV";
         public int Version => 2210729;
         public long Count;
         public long FirstRecStartPos;
@@ -15,8 +15,8 @@ namespace KeyValue
             this.FirstRecStartPos = Size;
             this.LastRecStartPos = Size;
         }
-        public override int Size => 2 + 4 + 8 + 8 + 8;
-        public override byte[] ToArray() =>
+        internal override int Size => 2 + 4 + 8 + 8 + 8;
+        internal override byte[] ToArray() =>
             base.SerializeBytes(System.Text.Encoding.ASCII.GetBytes(Prefix),
                                 BitConverter.GetBytes(Version),
                                 BitConverter.GetBytes(FirstRecStartPos),
@@ -27,7 +27,7 @@ namespace KeyValue
         /// -----   ---------   -------------------   ------------------   ---------
         /// 00 01   02 ... 05   06 ... 13             14 ... 21            22 ... 29
 
-        public override bool FromArray(byte[] data)
+        internal override bool FromArray(byte[] data)
         {
             if (data == null || data.Length == 0) return true;
 
