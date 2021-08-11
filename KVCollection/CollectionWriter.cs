@@ -9,7 +9,8 @@ namespace KeyValue
     {
         public readonly bool HasLog;
 
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)] private FileStream dat = null;
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)] private System.IO.FileInfo fi = null;
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal FileStream dat = null;
         [DebuggerBrowsable(DebuggerBrowsableState.Never)] private FileStream log = null;
         [DebuggerBrowsable(DebuggerBrowsableState.Never)] private object lck = new object();
 
@@ -19,11 +20,12 @@ namespace KeyValue
         public CollectionWriter(System.IO.FileInfo File, bool NoLog = false)
         {
             this.HasLog = true; // !NoLog;
+            this.fi = File;
 
             dat = new FileStream(File.FullName, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
             if (this.HasLog)
             {
-                log = new FileStream(File.FullName + ".log", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
+                log = new FileStream(File.FullName + ".log", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
 
                 if (wal_deserialize())
                     FlushToDisk(true);
@@ -55,26 +57,38 @@ namespace KeyValue
                 }
                 catch (Exception)
                 {
-
                     writingHasBegun = false;
                     throw;
                 }
-                FlushToDisk();
+
+                FlushToDisk(false);
             }
         }
-        private void FlushToDisk(bool recovery = false)
+
+        private Stopwatch sw = new Stopwatch();
+        private void FlushToDisk(bool recovery)
         {
             if (writingBuffers.Count == 0) return;
 
             if (recovery == false)
                 wal_serialize();
 
+            //sw.Restart();
             //execute commands
             foreach (var buffer in writingBuffers)
             {
-                dat.Position = buffer.position ;
+                if (dat.Position != buffer.position)
+                    dat.Position = buffer.position;
+
+                //for (int i = 0; i < buffer.data.Length; i++)
+                    //dat.WriteByte(buffer.data[i]);
                 dat.Write(buffer.data, 0, buffer.data.Length);
+
+                //dat.Write(buffer.data);
             }
+            //if (sw.Elapsed.Ticks > 2000)
+            //    System.Diagnostics.Debug.Print(sw.Elapsed.Ticks.ToString());
+
             dat.Flush();
 
             wal_clear();
@@ -90,6 +104,8 @@ namespace KeyValue
         {
             dat.SetLength(0);
             dat.Flush();
+            log.SetLength(0);
+            log.Flush();
         }
         #endregion
 
@@ -152,7 +168,7 @@ namespace KeyValue
         {
             if (this.HasLog == false) return;
 
-            log.Position = 0;
+            log.Seek(0, SeekOrigin.Begin);
             log.Write(wal_zero, 0, 4);
             //wal.SetLength(0);   // it takes +2sec for 100K 
             log.Flush();

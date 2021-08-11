@@ -29,7 +29,7 @@ namespace KVExplorer
         /// </summary>
         private void InitializeComponent()
         {
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle2 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
             this.DIALOG_SAVE = new System.Windows.Forms.SaveFileDialog();
             this.statusStrip1 = new System.Windows.Forms.StatusStrip();
             this.statusTitle = new System.Windows.Forms.ToolStripStatusLabel();
@@ -44,21 +44,9 @@ namespace KVExplorer
             this.Keys = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.BTN_CLOSE = new System.Windows.Forms.Button();
             this.panel2 = new System.Windows.Forms.Panel();
-            this.label6 = new System.Windows.Forms.Label();
-            this.EDIT_KEY5 = new System.Windows.Forms.TextBox();
-            this.label5 = new System.Windows.Forms.Label();
-            this.EDIT_KEY4 = new System.Windows.Forms.TextBox();
-            this.label4 = new System.Windows.Forms.Label();
-            this.EDIT_KEY3 = new System.Windows.Forms.TextBox();
-            this.label3 = new System.Windows.Forms.Label();
-            this.EDIT_KEY2 = new System.Windows.Forms.TextBox();
-            this.EDIT_VALUE_LEN = new System.Windows.Forms.Label();
-            this.EDIT_BTN_SAV = new System.Windows.Forms.Button();
-            this.EDIT_BTN_DEL = new System.Windows.Forms.Button();
-            this.EDIT_BTN_NEW = new System.Windows.Forms.Button();
+            this.EDIT_HDR = new System.Windows.Forms.TextBox();
             this.label2 = new System.Windows.Forms.Label();
             this.label1 = new System.Windows.Forms.Label();
-            this.EDIT_KEY1 = new System.Windows.Forms.TextBox();
             this.EDIT_VALUE = new System.Windows.Forms.TextBox();
             this.MESSAGE_LIST = new System.Windows.Forms.ListBox();
             this.statusStrip1.SuspendLayout();
@@ -196,7 +184,7 @@ namespace KVExplorer
             | System.Windows.Forms.AnchorStyles.Right)));
             this.DGRID_FILTER.BackColor = System.Drawing.Color.FloralWhite;
             this.DGRID_FILTER.BorderStyle = System.Windows.Forms.BorderStyle.None;
-            this.DGRID_FILTER.Location = new System.Drawing.Point(5, 79);
+            this.DGRID_FILTER.Location = new System.Drawing.Point(5, 61);
             this.DGRID_FILTER.Name = "DGRID_FILTER";
             this.DGRID_FILTER.PlaceholderText = "Search";
             this.DGRID_FILTER.Size = new System.Drawing.Size(220, 20);
@@ -215,21 +203,21 @@ namespace KVExplorer
             this.DGRID_LIST.BackgroundColor = System.Drawing.SystemColors.Window;
             this.DGRID_LIST.CellBorderStyle = System.Windows.Forms.DataGridViewCellBorderStyle.None;
             this.DGRID_LIST.ClipboardCopyMode = System.Windows.Forms.DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
-            dataGridViewCellStyle2.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
-            dataGridViewCellStyle2.BackColor = System.Drawing.SystemColors.Control;
-            dataGridViewCellStyle2.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            dataGridViewCellStyle2.ForeColor = System.Drawing.SystemColors.WindowText;
-            dataGridViewCellStyle2.SelectionBackColor = System.Drawing.SystemColors.Highlight;
-            dataGridViewCellStyle2.SelectionForeColor = System.Drawing.SystemColors.HighlightText;
-            dataGridViewCellStyle2.WrapMode = System.Windows.Forms.DataGridViewTriState.True;
-            this.DGRID_LIST.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle2;
+            dataGridViewCellStyle1.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle1.BackColor = System.Drawing.SystemColors.Control;
+            dataGridViewCellStyle1.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            dataGridViewCellStyle1.ForeColor = System.Drawing.SystemColors.WindowText;
+            dataGridViewCellStyle1.SelectionBackColor = System.Drawing.SystemColors.Highlight;
+            dataGridViewCellStyle1.SelectionForeColor = System.Drawing.SystemColors.HighlightText;
+            dataGridViewCellStyle1.WrapMode = System.Windows.Forms.DataGridViewTriState.True;
+            this.DGRID_LIST.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle1;
             this.DGRID_LIST.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.DGRID_LIST.ColumnHeadersVisible = false;
             this.DGRID_LIST.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
             this.Keys});
             this.DGRID_LIST.Cursor = System.Windows.Forms.Cursors.Default;
             this.DGRID_LIST.EnableHeadersVisualStyles = false;
-            this.DGRID_LIST.Location = new System.Drawing.Point(5, 105);
+            this.DGRID_LIST.Location = new System.Drawing.Point(5, 87);
             this.DGRID_LIST.MultiSelect = false;
             this.DGRID_LIST.Name = "DGRID_LIST";
             this.DGRID_LIST.ReadOnly = true;
@@ -244,7 +232,7 @@ namespace KVExplorer
             this.DGRID_LIST.ShowCellToolTips = false;
             this.DGRID_LIST.ShowEditingIcon = false;
             this.DGRID_LIST.ShowRowErrors = false;
-            this.DGRID_LIST.Size = new System.Drawing.Size(220, 290);
+            this.DGRID_LIST.Size = new System.Drawing.Size(220, 308);
             this.DGRID_LIST.TabIndex = 19;
             this.DGRID_LIST.SelectionChanged += new System.EventHandler(this.DGRID_SelChanged);
             // 
@@ -277,21 +265,9 @@ namespace KVExplorer
             // 
             this.panel2.AutoScroll = true;
             this.panel2.BackColor = System.Drawing.Color.White;
-            this.panel2.Controls.Add(this.label6);
-            this.panel2.Controls.Add(this.EDIT_KEY5);
-            this.panel2.Controls.Add(this.label5);
-            this.panel2.Controls.Add(this.EDIT_KEY4);
-            this.panel2.Controls.Add(this.label4);
-            this.panel2.Controls.Add(this.EDIT_KEY3);
-            this.panel2.Controls.Add(this.label3);
-            this.panel2.Controls.Add(this.EDIT_KEY2);
-            this.panel2.Controls.Add(this.EDIT_VALUE_LEN);
-            this.panel2.Controls.Add(this.EDIT_BTN_SAV);
-            this.panel2.Controls.Add(this.EDIT_BTN_DEL);
-            this.panel2.Controls.Add(this.EDIT_BTN_NEW);
+            this.panel2.Controls.Add(this.EDIT_HDR);
             this.panel2.Controls.Add(this.label2);
             this.panel2.Controls.Add(this.label1);
-            this.panel2.Controls.Add(this.EDIT_KEY1);
             this.panel2.Controls.Add(this.EDIT_VALUE);
             this.panel2.Cursor = System.Windows.Forms.Cursors.Default;
             this.panel2.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -300,139 +276,28 @@ namespace KVExplorer
             this.panel2.Size = new System.Drawing.Size(806, 402);
             this.panel2.TabIndex = 0;
             // 
-            // label6
+            // EDIT_HDR
             // 
-            this.label6.AutoSize = true;
-            this.label6.Location = new System.Drawing.Point(14, 326);
-            this.label6.Name = "label6";
-            this.label6.Size = new System.Drawing.Size(41, 20);
-            this.label6.TabIndex = 30;
-            this.label6.Text = "Key5";
-            // 
-            // EDIT_KEY5
-            // 
-            this.EDIT_KEY5.BackColor = System.Drawing.Color.FloralWhite;
-            this.EDIT_KEY5.Cursor = System.Windows.Forms.Cursors.Default;
-            this.EDIT_KEY5.Location = new System.Drawing.Point(13, 349);
-            this.EDIT_KEY5.Name = "EDIT_KEY5";
-            this.EDIT_KEY5.ReadOnly = true;
-            this.EDIT_KEY5.Size = new System.Drawing.Size(241, 27);
-            this.EDIT_KEY5.TabIndex = 29;
-            // 
-            // label5
-            // 
-            this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(14, 263);
-            this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(41, 20);
-            this.label5.TabIndex = 28;
-            this.label5.Text = "Key4";
-            // 
-            // EDIT_KEY4
-            // 
-            this.EDIT_KEY4.BackColor = System.Drawing.Color.FloralWhite;
-            this.EDIT_KEY4.Cursor = System.Windows.Forms.Cursors.Default;
-            this.EDIT_KEY4.Location = new System.Drawing.Point(13, 286);
-            this.EDIT_KEY4.Name = "EDIT_KEY4";
-            this.EDIT_KEY4.ReadOnly = true;
-            this.EDIT_KEY4.Size = new System.Drawing.Size(241, 27);
-            this.EDIT_KEY4.TabIndex = 27;
-            // 
-            // label4
-            // 
-            this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(15, 193);
-            this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(41, 20);
-            this.label4.TabIndex = 26;
-            this.label4.Text = "Key3";
-            // 
-            // EDIT_KEY3
-            // 
-            this.EDIT_KEY3.BackColor = System.Drawing.Color.FloralWhite;
-            this.EDIT_KEY3.Cursor = System.Windows.Forms.Cursors.Default;
-            this.EDIT_KEY3.Location = new System.Drawing.Point(14, 216);
-            this.EDIT_KEY3.Name = "EDIT_KEY3";
-            this.EDIT_KEY3.ReadOnly = true;
-            this.EDIT_KEY3.Size = new System.Drawing.Size(241, 27);
-            this.EDIT_KEY3.TabIndex = 25;
-            // 
-            // label3
-            // 
-            this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(15, 125);
-            this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(41, 20);
-            this.label3.TabIndex = 24;
-            this.label3.Text = "Key2";
-            // 
-            // EDIT_KEY2
-            // 
-            this.EDIT_KEY2.BackColor = System.Drawing.Color.FloralWhite;
-            this.EDIT_KEY2.Cursor = System.Windows.Forms.Cursors.Default;
-            this.EDIT_KEY2.Location = new System.Drawing.Point(14, 148);
-            this.EDIT_KEY2.Name = "EDIT_KEY2";
-            this.EDIT_KEY2.ReadOnly = true;
-            this.EDIT_KEY2.Size = new System.Drawing.Size(241, 27);
-            this.EDIT_KEY2.TabIndex = 23;
-            // 
-            // EDIT_VALUE_LEN
-            // 
-            this.EDIT_VALUE_LEN.AutoSize = true;
-            this.EDIT_VALUE_LEN.Location = new System.Drawing.Point(327, 58);
-            this.EDIT_VALUE_LEN.Margin = new System.Windows.Forms.Padding(0);
-            this.EDIT_VALUE_LEN.Name = "EDIT_VALUE_LEN";
-            this.EDIT_VALUE_LEN.Size = new System.Drawing.Size(98, 20);
-            this.EDIT_VALUE_LEN.TabIndex = 22;
-            this.EDIT_VALUE_LEN.Text = "( Length = 0 )";
-            // 
-            // EDIT_BTN_SAV
-            // 
-            this.EDIT_BTN_SAV.BackColor = System.Drawing.Color.ForestGreen;
-            this.EDIT_BTN_SAV.FlatAppearance.BorderColor = System.Drawing.Color.DarkGreen;
-            this.EDIT_BTN_SAV.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.EDIT_BTN_SAV.ForeColor = System.Drawing.Color.White;
-            this.EDIT_BTN_SAV.Location = new System.Drawing.Point(87, 12);
-            this.EDIT_BTN_SAV.Name = "EDIT_BTN_SAV";
-            this.EDIT_BTN_SAV.Size = new System.Drawing.Size(68, 29);
-            this.EDIT_BTN_SAV.TabIndex = 20;
-            this.EDIT_BTN_SAV.Text = "Save";
-            this.EDIT_BTN_SAV.UseVisualStyleBackColor = false;
-            this.EDIT_BTN_SAV.Click += new System.EventHandler(this.EDIT_BTN_SAV_Click);
-            // 
-            // EDIT_BTN_DEL
-            // 
-            this.EDIT_BTN_DEL.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.EDIT_BTN_DEL.BackColor = System.Drawing.Color.OrangeRed;
-            this.EDIT_BTN_DEL.FlatAppearance.BorderColor = System.Drawing.Color.DarkRed;
-            this.EDIT_BTN_DEL.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.EDIT_BTN_DEL.ForeColor = System.Drawing.Color.White;
-            this.EDIT_BTN_DEL.Location = new System.Drawing.Point(726, 46);
-            this.EDIT_BTN_DEL.Name = "EDIT_BTN_DEL";
-            this.EDIT_BTN_DEL.Size = new System.Drawing.Size(68, 29);
-            this.EDIT_BTN_DEL.TabIndex = 19;
-            this.EDIT_BTN_DEL.Text = "Delete";
-            this.EDIT_BTN_DEL.UseVisualStyleBackColor = false;
-            this.EDIT_BTN_DEL.Click += new System.EventHandler(this.EDIT_BTN_CNL_Click);
-            // 
-            // EDIT_BTN_NEW
-            // 
-            this.EDIT_BTN_NEW.BackColor = System.Drawing.Color.RoyalBlue;
-            this.EDIT_BTN_NEW.FlatAppearance.BorderColor = System.Drawing.Color.MidnightBlue;
-            this.EDIT_BTN_NEW.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.EDIT_BTN_NEW.ForeColor = System.Drawing.Color.White;
-            this.EDIT_BTN_NEW.Location = new System.Drawing.Point(13, 12);
-            this.EDIT_BTN_NEW.Name = "EDIT_BTN_NEW";
-            this.EDIT_BTN_NEW.Size = new System.Drawing.Size(68, 29);
-            this.EDIT_BTN_NEW.TabIndex = 18;
-            this.EDIT_BTN_NEW.Text = "New";
-            this.EDIT_BTN_NEW.UseVisualStyleBackColor = false;
-            this.EDIT_BTN_NEW.Click += new System.EventHandler(this.EDIT_BTN_NEW_Click);
+            this.EDIT_HDR.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left)));
+            this.EDIT_HDR.BackColor = System.Drawing.Color.WhiteSmoke;
+            this.EDIT_HDR.BorderStyle = System.Windows.Forms.BorderStyle.None;
+            this.EDIT_HDR.CausesValidation = false;
+            this.EDIT_HDR.Cursor = System.Windows.Forms.Cursors.Default;
+            this.EDIT_HDR.Location = new System.Drawing.Point(14, 61);
+            this.EDIT_HDR.MinimumSize = new System.Drawing.Size(4, 150);
+            this.EDIT_HDR.Multiline = true;
+            this.EDIT_HDR.Name = "EDIT_HDR";
+            this.EDIT_HDR.ReadOnly = true;
+            this.EDIT_HDR.ScrollBars = System.Windows.Forms.ScrollBars.Both;
+            this.EDIT_HDR.Size = new System.Drawing.Size(241, 331);
+            this.EDIT_HDR.TabIndex = 25;
+            this.EDIT_HDR.WordWrap = false;
             // 
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(276, 58);
+            this.label2.Location = new System.Drawing.Point(261, 38);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(45, 20);
             this.label2.TabIndex = 15;
@@ -441,37 +306,27 @@ namespace KVExplorer
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(14, 58);
+            this.label1.Location = new System.Drawing.Point(14, 38);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(87, 20);
+            this.label1.Size = new System.Drawing.Size(58, 20);
             this.label1.TabIndex = 14;
-            this.label1.Text = "Primary Key";
-            // 
-            // EDIT_KEY1
-            // 
-            this.EDIT_KEY1.BackColor = System.Drawing.Color.FloralWhite;
-            this.EDIT_KEY1.Cursor = System.Windows.Forms.Cursors.Default;
-            this.EDIT_KEY1.Location = new System.Drawing.Point(13, 81);
-            this.EDIT_KEY1.Name = "EDIT_KEY1";
-            this.EDIT_KEY1.ReadOnly = true;
-            this.EDIT_KEY1.Size = new System.Drawing.Size(242, 27);
-            this.EDIT_KEY1.TabIndex = 13;
+            this.label1.Text = "Header";
             // 
             // EDIT_VALUE
             // 
             this.EDIT_VALUE.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.EDIT_VALUE.BackColor = System.Drawing.Color.FloralWhite;
+            this.EDIT_VALUE.BackColor = System.Drawing.Color.WhiteSmoke;
             this.EDIT_VALUE.CausesValidation = false;
             this.EDIT_VALUE.Cursor = System.Windows.Forms.Cursors.Default;
-            this.EDIT_VALUE.Location = new System.Drawing.Point(276, 81);
+            this.EDIT_VALUE.Location = new System.Drawing.Point(261, 61);
             this.EDIT_VALUE.MinimumSize = new System.Drawing.Size(4, 150);
             this.EDIT_VALUE.Multiline = true;
             this.EDIT_VALUE.Name = "EDIT_VALUE";
             this.EDIT_VALUE.ReadOnly = true;
             this.EDIT_VALUE.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.EDIT_VALUE.Size = new System.Drawing.Size(518, 311);
+            this.EDIT_VALUE.Size = new System.Drawing.Size(533, 331);
             this.EDIT_VALUE.TabIndex = 12;
             this.EDIT_VALUE.WordWrap = false;
             // 
@@ -529,27 +384,15 @@ namespace KVExplorer
         private System.Windows.Forms.Panel panel2;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Label label1;
-        private System.Windows.Forms.TextBox EDIT_KEY1;
         private System.Windows.Forms.TextBox EDIT_VALUE;
         private System.Windows.Forms.Panel panel3;
         private System.Windows.Forms.TextBox DGRID_FILTER;
         private System.Windows.Forms.DataGridView DGRID_LIST;
         private System.Windows.Forms.DataGridViewTextBoxColumn Keys;
-        private System.Windows.Forms.Button EDIT_BTN_NEW;
-        private System.Windows.Forms.Button EDIT_BTN_SAV;
-        private System.Windows.Forms.Button EDIT_BTN_DEL;
-        private System.Windows.Forms.Label EDIT_VALUE_LEN;
-        private System.Windows.Forms.Button BTN_TEST;
         private System.Windows.Forms.Button BTN_CLOSE;
         private System.Windows.Forms.Button BTN_OPEN;
-        private System.Windows.Forms.Label label3;
-        private System.Windows.Forms.TextBox EDIT_KEY2;
-        private System.Windows.Forms.Label label6;
-        private System.Windows.Forms.TextBox EDIT_KEY5;
-        private System.Windows.Forms.Label label5;
-        private System.Windows.Forms.TextBox EDIT_KEY4;
-        private System.Windows.Forms.Label label4;
-        private System.Windows.Forms.TextBox EDIT_KEY3;
+        private System.Windows.Forms.TextBox EDIT_HDR;
+        private System.Windows.Forms.Button BTN_TEST;
     }
 }
 

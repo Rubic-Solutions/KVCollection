@@ -1,33 +1,38 @@
 ﻿using System;
+using System.Diagnostics;
 
 namespace KeyValue
 {
-    internal class HeadOfFile : Head<HeadOfFile>
+    internal class FileHeader
     {
-        public string Prefix => "KV";
-        public int Version => 2210729;
-        public long Count;
-        public long FirstRecStartPos;
-        public long LastRecStartPos;
+        internal string Prefix => "KV";
+        internal int Version => 2210729;
+        internal long Pos => 0;
+        internal long Count;
+        internal long FirstRecStartPos;
+        internal long LastRecStartPos;
+        internal int Size => 2 + 4 + 8 + 8 + 8;
 
-        public HeadOfFile()
+        public FileHeader()
         {
             this.FirstRecStartPos = Size;
             this.LastRecStartPos = Size;
         }
-        internal override int Size => 2 + 4 + 8 + 8 + 8;
-        internal override byte[] ToArray() =>
-            base.SerializeBytes(System.Text.Encoding.ASCII.GetBytes(Prefix),
+        internal byte[] ToArray() =>
+            Serializer.ConcatBytes(this.Size,
+                                System.Text.Encoding.ASCII.GetBytes(Prefix),
                                 BitConverter.GetBytes(Version),
                                 BitConverter.GetBytes(FirstRecStartPos),
                                 BitConverter.GetBytes(LastRecStartPos),
                                 BitConverter.GetBytes(Count));
 
+        /// POS=0  ->   Len=30  
+        /// 
         /// Pfx     Vers(4)     FirstRecStartPos(8)   LastRecStartPos(8)   Count(8)
         /// -----   ---------   -------------------   ------------------   ---------
         /// 00 01   02 ... 05   06 ... 13             14 ... 21            22 ... 29
 
-        internal override bool FromArray(byte[] data)
+        internal bool FromArray(byte[] data)
         {
             if (data == null || data.Length == 0) return true;
 

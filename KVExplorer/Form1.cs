@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -14,7 +16,7 @@ namespace KVExplorer
     {
         private static string exe_path = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
-        private KeyValue.Collection kvFile = new KeyValue.Collection();
+        private KeyValue.CollectionBase kvFile = new KeyValue.CollectionBase();
 
 
         private readonly DataTable DGRID_LIST_SOURCE = new DataTable();
@@ -41,16 +43,14 @@ namespace KVExplorer
         private async Task<bool> file_set(string fullFileName)
         {
             SetItem(-1);
-            if (string.IsNullOrEmpty(fullFileName)) return false;
-
+            this.Text = "KV Explorer";
             MESSAGE_LIST.Items.Add(string.Empty);
-            EDIT_KEY1.Text = string.Empty;
-            EDIT_VALUE.Text = string.Empty;
-
+            if (string.IsNullOrEmpty(fullFileName)) return false;
+            //----------------------------------------------------
             this.Text = "KV Explorer - " + fullFileName;
             var result = await DoWork(() =>
             {
-                kvFile.Open(fullFileName);
+                kvFile.Open(fullFileName);  // => bu method OPEN ve COUNT vs interface de olmalı. 
                 SetItem(-1);
                 BTN_CLOSE.Visible = true;
                 BTN_OPEN.Visible = false;
@@ -77,6 +77,16 @@ namespace KVExplorer
                 DGRID_LIST_SOURCE.EndLoadData();
             }, "Keys are being listed.");
             MessageAdd("\tCount = " + DGRID_LIST_SOURCE.Rows.Count);
+            if (result.Success == false) return false;
+
+            var adult_count = 0;
+            var dt = DateTime.Now.AddYears(-30);
+            result = await DoWork(() =>
+            {
+                adult_count = kvFile.FindAll<testModel>(x => (bool)x[1] && (DateTime)x[2] > dt).Count();
+            }, "Filter applied.");
+            MessageAdd("\tTotal " + adult_count + " adult(s) found.");
+
             return result.Success;
         }
 
@@ -98,75 +108,6 @@ namespace KVExplorer
             BTN_OPEN.Visible = true;
             BTN_TEST.Visible = true;
         }
-        private async void BTN_TEST_Click(object sender, EventArgs e)
-        {
-            if (DIALOG_SAVE.ShowDialog() == DialogResult.OK)
-                if (await file_set(DIALOG_SAVE.FileName) == false)
-                    return;
-
-            DoWorkResult result = null;
-
-            //result = await DoWork(() =>
-            // {
-            //     kvFile.Truncate();
-            // }, "File is being truncated.");
-            //if (result.Success == false) return;
-
-
-            //result = await DoWork(() =>
-            //{
-            //    for (int i = 1; i < 1000000; i++)
-            //    {
-            //        var item = new testModel();
-            //        item.Name = "Person " + i;
-            //        item.Age = ((i % 90) + 1) + 10;
-            //        item.BirtDate = new DateTime(DateTime.Now.Year - item.Age, (i % 12) + 1, 1);
-            //        item.IsAdult = item.Age > 18;
-
-            //        kvFile.Add("Key-" + i, JsonSerializer.Serialize(item, json_opt),
-            //                        item.IsAdult ? "Y" : "N",
-            //                        item.BirtDate.Ticks.ToString());
-            //    }
-            //}, "Sample records are being generated.");
-            //if (result.Success == false) return;
-            //await loadKeys();
-
-            var adult_count = 0;
-            var dt = DateTime.Now.AddYears(-30).Ticks;
-            result = await DoWork(() =>
-            {
-                adult_count = kvFile.FindAll(x =>
-                {
-                    //return string.Compare(x.PrimaryKey, "Key-250000") == 1;
-                    return x.Key2 == "Y" && long.Parse(x.Key3) > dt;
-                }).Count();
-                //foreach (var item in kvFile.GetKeys())
-                //{
-                //    if (string.Compare(item, "Key-250000") == 1)
-                //        adult_count++;
-                //    //var obj = JsonSerializer.Deserialize<testModel>(item.Value, json_opt);
-                //    //if (obj.IsAdult)
-                //    //    adult_count++;
-                //}
-            }, "Filter applied.");
-            MessageAdd("\tTotal " + adult_count + " adult(s) found.");
-
-            if (result.Success == false) return;
-        }
-
-        private class testModel
-        {
-            public string Name;
-            public int Age;
-            public DateTime BirtDate;
-            public bool IsAdult;
-        }
-        //sw.Restart();
-        //System.Diagnostics.Debug.Print("Count = " + KeyValueFile.Count() + " (" + sw.Elapsed.ToString() + ")");
-
-        //sw.Restart();
-        //System.Diagnostics.Debug.Print("Count = " + KeyValueFile.Count() + " (" + sw.Elapsed.ToString() + ")");
-
         #region "DGRID"
         private void DGRID_FILTER_TextChanged(object sender, EventArgs e)
         {
@@ -189,49 +130,45 @@ namespace KVExplorer
         private bool EDIT_IS_EDIT => (DGRID_SEL_INX != -1);
         private async void SetItem(int SelIndex)
         {
-            EDIT_KEY1.Text = string.Empty;
-            EDIT_KEY2.Text = string.Empty;
-            EDIT_KEY3.Text = string.Empty;
-            EDIT_KEY4.Text = string.Empty;
-            EDIT_KEY5.Text = string.Empty;
+            EDIT_HDR.Text = string.Empty;
             EDIT_VALUE.Text = string.Empty;
-            EDIT_VALUE_LEN.Text = "(Length = 0,  Elapsed = 0)";
 
             DGRID_SEL_INX = SelIndex;
-            EDIT_KEY1.ReadOnly = this.EDIT_IS_EDIT;
             EDIT_VALUE.ReadOnly = false;
 
             if (this.EDIT_IS_EDIT)
             {
-                EDIT_KEY1.Text = (string)DGRID_LIST.Rows[SelIndex].Cells[0].Value;
+                var pkey = (string)DGRID_LIST.Rows[SelIndex].Cells[0].Value;
 
-                string[] keys = null;
+                KeyValue.RowHeader head = null;
                 string data = null;
                 var result = await DoWork(() =>
                 {
-                    data = kvFile.Get(EDIT_KEY1.Text, out keys);
+                    data = System.Text.Encoding.UTF8.GetString(kvFile.GetValue(pkey, out head));
                 }, null);
                 EDIT_VALUE.Text = data;
-                EDIT_VALUE_LEN.Text = String.Format("(Length = {0},  Elapsed = {1})",
-                                                        (data?.Length ?? 0).ToString("#,##0"),
-                                                        result.Duration.ToString(@"ss\.fffffff"));
-                if (keys.Length > 1) EDIT_KEY2.Text = keys[1];
-                if (keys.Length > 2) EDIT_KEY3.Text = keys[2];
-                if (keys.Length > 3) EDIT_KEY4.Text = keys[3];
-                if (keys.Length > 4) EDIT_KEY5.Text = keys[4];
+
+                var txt = new List<string>();
+                txt.Add("Primary Key");
+                txt.Add("    " + head.PrimaryKey);
+
+                txt.Add("");
+                txt.Add("Indexed Keys");
+                for (int i = 1; i < head.IndexKeyCount; i++)
+                    txt.Add("    " + head.IndexKey(i).ToString());
+
+                txt.Add("");
+                txt.Add("Size of");
+                txt.Add("    Key=" + head.KeySize);
+                txt.Add("    Value=" + head.ValueSize);
+                txt.Add("    Row=" + head.RowSize);
+
+                txt.Add("");
+                txt.Add("Elapsed");
+                txt.Add("    " + result.Duration.ToString(@"ss\.fffffff"));
+
+                EDIT_HDR.Text = string.Join(Environment.NewLine, txt);
             }
-
-            EDIT_BTN_NEW.Enabled = (kvFile.FileInfo is object);
-            EDIT_BTN_SetColor(EDIT_BTN_NEW, System.Drawing.Color.RoyalBlue, System.Drawing.Color.White);
-
-            EDIT_BTN_SAV.Enabled = (kvFile.FileInfo is object);
-            EDIT_BTN_SetColor(EDIT_BTN_SAV, System.Drawing.Color.ForestGreen, System.Drawing.Color.White);
-
-            EDIT_BTN_DEL.Enabled = (SelIndex != -1);
-            EDIT_BTN_SetColor(EDIT_BTN_DEL, System.Drawing.Color.OrangeRed, System.Drawing.Color.White);
-
-
-
         }
         private void EDIT_BTN_SetColor(Button btn, System.Drawing.Color bgColor, System.Drawing.Color color)
         {
@@ -239,34 +176,74 @@ namespace KVExplorer
             btn.ForeColor = btn.Enabled ? color : System.Drawing.Color.Silver;
             btn.FlatAppearance.BorderColor = btn.Enabled ? bgColor : System.Drawing.Color.WhiteSmoke;
         }
+        #endregion
 
-        private void EDIT_BTN_NEW_Click(object sender, EventArgs e) => SetItem(-1);
-        private async void EDIT_BTN_SAV_Click(object sender, EventArgs e)
+        #region "TEST"
+        private async void BTN_TEST_Click(object sender, EventArgs e)
         {
-            if (this.EDIT_IS_NEW)
-                await DoWork(() =>
-                {
-                    kvFile.Add(EDIT_KEY1.Text, EDIT_VALUE.Text);
-                    DGRID_LIST_SOURCE.Rows.Add(EDIT_KEY1.Text);
-                    Application.DoEvents();
+            BTN_CLOSE_Click(sender, e);
 
-                    DGRID_LIST.Rows[DGRID_LIST.Rows.GetLastRow(DataGridViewElementStates.Displayed)].Selected = true;
-                }, "Record has been added. (KEY = " + EDIT_KEY1.Text + ")");
-            else
-                await DoWork(() =>
-                {
-                    kvFile.Update(EDIT_KEY1.Text, EDIT_VALUE.Text);
-                }, "Record has been updated. (KEY = " + EDIT_KEY1.Text + ")");
-        }
-        private async void EDIT_BTN_CNL_Click(object sender, EventArgs e)
-        {
-            if (DGRID_SEL_INX == -1) return;
-            await DoWork(() =>
+            if (DIALOG_SAVE.ShowDialog() != DialogResult.OK ||
+                string.IsNullOrEmpty(DIALOG_SAVE.FileName)) return;
+
+            KeyValue.CollectionIndexer
+                        .Define<testModel>(DIALOG_SAVE.FileName)
+                            .Clear()
+                            .EnsureIndex(x => x.IsAdult)
+                            .EnsureIndex(x => x.BirtDate);
+
+            //var kvFile2 = new KeyValue.CollectionBase();
+            //kvFile2.Open(DIALOG_SAVE.FileName, dontLoad:true);
+
+            //var kvFile3 = new KeyValue.CollectionBase();
+            //kvFile3.Open(DIALOG_SAVE.FileName, dontLoad:true);
+
+            kvFile = new KeyValue.CollectionBase();
+            kvFile.Open(DIALOG_SAVE.FileName);
+
+            DoWorkResult result = null;
+
+            result = await DoWork(() =>
+             {
+                 kvFile.Truncate();
+             }, "File is being truncated.");
+            if (result.Success == false) return;
+
+
+            result = await DoWork(() =>
             {
-                kvFile.Delete(EDIT_KEY1.Text);
-                DGRID_LIST_SOURCE.Rows.RemoveAt(DGRID_SEL_INX);
-            }, "Record has been deleted. (KEY = " + EDIT_KEY1.Text + ")");
+                for (int i = 1; i < 100000; i++)
+                {
+                    var item = new testModel();
+                    item.Name = "Person " + i;
+                    item.Age = ((i % 90) + 1) + 10;
+                    item.BirtDate = new DateTime(DateTime.Now.Year - item.Age, (i % 12) + 1, 1);
+                    item.IsAdult = item.Age > 18;
+
+                    kvFile.Add("Key-" + i, item);
+                }
+            }, "Sample records are being generated.");
+
+            if (result.Success == false) return;
+            await loadKeys();
+
         }
+
+        private class testModel
+        {
+            public string Name;
+            public int Age;
+            public DateTime BirtDate;
+            public bool IsAdult;
+
+            [JsonIgnore()]
+            public bool IsAdult2;
+        }
+        //sw.Restart();
+        //System.Diagnostics.Debug.Print("Count = " + KeyValueFile.Count() + " (" + sw.Elapsed.ToString() + ")");
+
+        //sw.Restart();
+        //System.Diagnostics.Debug.Print("Count = " + KeyValueFile.Count() + " (" + sw.Elapsed.ToString() + ")");
         #endregion
 
 
