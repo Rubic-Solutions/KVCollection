@@ -3,7 +3,7 @@ using System.Text.Json;
 
 namespace KeyValue
 {
-    internal class Serializer
+    public static class Serializer
     {
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private static System.Text.Encoding enc = System.Text.Encoding.UTF8;
@@ -16,12 +16,12 @@ namespace KeyValue
             IgnoreNullValues = true
         };
 
-        internal static byte[] ToBytes(object obj) => enc.GetBytes(ToString(obj));
-        internal static T FromBytes<T>(byte[] bytes) => (bytes == null || bytes.Length == 0) ? default : FromString<T>(enc.GetString(bytes));
+        public static byte[] ToBytes(object obj) => enc.GetBytes(ToString(obj));
+        public static T FromBytes<T>(byte[] bytes) => (bytes == null || bytes.Length == 0) ? default : FromString<T>(enc.GetString(bytes));
         internal static T FromBytes<T>(byte[] bytes, int index, int count) => (bytes == null || bytes.Length == 0) ? default : FromString<T>(enc.GetString(bytes, index, count));
 
-        internal static string ToString(object obj) => JsonSerializer.Serialize(obj, serialize_opt);
-        internal static T FromString<T>(string data) => JsonSerializer.Deserialize<T>(data, serialize_opt);
+        public static string ToString(object obj) => JsonSerializer.Serialize(obj, serialize_opt);
+        public static T FromString<T>(string data) => JsonSerializer.Deserialize<T>(data, serialize_opt);
 
 
         internal static byte[] ConcatBytes(int Size, params byte[][] datas)

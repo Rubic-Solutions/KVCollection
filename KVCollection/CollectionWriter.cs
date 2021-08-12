@@ -10,7 +10,8 @@ namespace KeyValue
         public readonly bool HasLog;
 
         [DebuggerBrowsable(DebuggerBrowsableState.Never)] private System.IO.FileInfo fi = null;
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal FileStream dat = null;
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal int InstanceCount;
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal FileStream fs = null;
         [DebuggerBrowsable(DebuggerBrowsableState.Never)] private FileStream log = null;
         [DebuggerBrowsable(DebuggerBrowsableState.Never)] private object lck = new object();
 
@@ -22,7 +23,7 @@ namespace KeyValue
             this.HasLog = true; // !NoLog;
             this.fi = File;
 
-            dat = new FileStream(File.FullName, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
+            fs = new FileStream(File.FullName, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
             if (this.HasLog)
             {
                 log = new FileStream(File.FullName + ".log", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
@@ -35,14 +36,14 @@ namespace KeyValue
         #region "Open/Close"
         public void Close()
         {
-            dat.Close();
+            fs.Close();
             log.Close();
         }
         #endregion
 
         #region "File methods"
-        public long Length => dat.Length;
-        public bool IsInitial => dat.Length == 0;
+        public long Length => fs.Length;
+        public bool IsInitial => fs.Length == 0;
         public void WriteBegin(Action fn)
         {
             lock (lck)
@@ -77,19 +78,19 @@ namespace KeyValue
             //execute commands
             foreach (var buffer in writingBuffers)
             {
-                if (dat.Position != buffer.position)
-                    dat.Position = buffer.position;
+                if (fs.Position != buffer.position)
+                    fs.Position = buffer.position;
 
                 //for (int i = 0; i < buffer.data.Length; i++)
-                    //dat.WriteByte(buffer.data[i]);
-                dat.Write(buffer.data, 0, buffer.data.Length);
+                //dat.WriteByte(buffer.data[i]);
+                fs.Write(buffer.data, 0, buffer.data.Length);
 
                 //dat.Write(buffer.data);
             }
             //if (sw.Elapsed.Ticks > 2000)
             //    System.Diagnostics.Debug.Print(sw.Elapsed.Ticks.ToString());
 
-            dat.Flush();
+            fs.Flush();
 
             wal_clear();
         }
@@ -102,8 +103,8 @@ namespace KeyValue
         }
         public void Truncate()
         {
-            dat.SetLength(0);
-            dat.Flush();
+            fs.SetLength(0);
+            fs.Flush();
             log.SetLength(0);
             log.Flush();
         }

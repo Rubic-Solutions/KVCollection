@@ -70,9 +70,9 @@ namespace KVExplorer
                 if (kvFile.Count == 0) return;
 
                 DGRID_LIST_SOURCE.BeginLoadData();
-                foreach (var item in kvFile.GetKeys())
+                foreach (var item in kvFile.GetHeaders())
                 {
-                    DGRID_LIST_SOURCE.Rows.Add(item);
+                    DGRID_LIST_SOURCE.Rows.Add(item.GetPrimaryKey);
                 }
                 DGRID_LIST_SOURCE.EndLoadData();
             }, "Keys are being listed.");
@@ -82,10 +82,31 @@ namespace KVExplorer
             var adult_count = 0;
             var dt = DateTime.Now.AddYears(-30);
             result = await DoWork(() =>
-            {
-                adult_count = kvFile.FindAll<testModel>(x => (bool)x[1] && (DateTime)x[2] > dt).Count();
-            }, "Filter applied.");
+                {
+                    adult_count = (from x
+                                  in kvFile.All<testModel>()
+                                   where x.Value.IsAdult && x.Value.BirtDate > dt
+                                   select x).Count();
+                }, "LINQ search.");
             MessageAdd("\tTotal " + adult_count + " adult(s) found.");
+
+            result = await DoWork(() =>
+                {
+                    KeyValuePair<KeyValue.RowHeader, byte[]> item = default;
+                    for (int i = 0; i < 100; i++)
+                        item = kvFile.GetFirst();
+
+                    MessageAdd("\tKey = " + item.Key.GetPrimaryKey);
+                }, "Get First Record 100 times.");
+
+            result = await DoWork(() =>
+                {
+                    KeyValuePair<KeyValue.RowHeader, byte[]> item = default;
+                    for (int i = 0; i < 100; i++)
+                        item = kvFile.GetLast();
+
+                    MessageAdd("\tKey = " + item.Key.GetPrimaryKey);
+                }, "Get Last Record 100 times.");
 
             return result.Success;
         }
@@ -144,24 +165,13 @@ namespace KVExplorer
                 string data = null;
                 var result = await DoWork(() =>
                 {
-                    data = System.Text.Encoding.UTF8.GetString(kvFile.GetValue(pkey, out head));
+                    data = System.Text.Encoding.UTF8.GetString(kvFile.GetValue(pkey));
                 }, null);
                 EDIT_VALUE.Text = data;
 
                 var txt = new List<string>();
                 txt.Add("Primary Key");
-                txt.Add("    " + head.PrimaryKey);
-
-                txt.Add("");
-                txt.Add("Indexed Keys");
-                for (int i = 1; i < head.IndexKeyCount; i++)
-                    txt.Add("    " + head.IndexKey(i).ToString());
-
-                txt.Add("");
-                txt.Add("Size of");
-                txt.Add("    Key=" + head.KeySize);
-                txt.Add("    Value=" + head.ValueSize);
-                txt.Add("    Row=" + head.RowSize);
+                txt.Add("    " + pkey);
 
                 txt.Add("");
                 txt.Add("Elapsed");
@@ -186,11 +196,6 @@ namespace KVExplorer
             if (DIALOG_SAVE.ShowDialog() != DialogResult.OK ||
                 string.IsNullOrEmpty(DIALOG_SAVE.FileName)) return;
 
-            KeyValue.CollectionIndexer
-                        .Define<testModel>(DIALOG_SAVE.FileName)
-                            .Clear()
-                            .EnsureIndex(x => x.IsAdult)
-                            .EnsureIndex(x => x.BirtDate);
 
             //var kvFile2 = new KeyValue.CollectionBase();
             //kvFile2.Open(DIALOG_SAVE.FileName, dontLoad:true);
@@ -212,7 +217,7 @@ namespace KVExplorer
 
             result = await DoWork(() =>
             {
-                for (int i = 1; i < 100000; i++)
+                for (int i = 1; i < 500000; i++)
                 {
                     var item = new testModel();
                     item.Name = "Person " + i;
@@ -220,7 +225,7 @@ namespace KVExplorer
                     item.BirtDate = new DateTime(DateTime.Now.Year - item.Age, (i % 12) + 1, 1);
                     item.IsAdult = item.Age > 18;
 
-                    kvFile.Add("Key-" + i, item);
+                    kvFile.Add("Key-" + i, KeyValue.Serializer.ToBytes(item));
                 }
             }, "Sample records are being generated.");
 

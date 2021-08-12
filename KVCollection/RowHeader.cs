@@ -1,19 +1,15 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 
 namespace KeyValue
 {
     public class RowHeader
     {
-        public string PrimaryKey => (string)Keys[0];
-        public object IndexKey(int index) => Keys[index];
-        public int IndexKeyCount => Keys.Count;
+        public string PrimaryKey;
         public int KeySize => KeyActualLength;
         public int ValueSize => ValueActualLength;
         public int RowSize => Size + KeyLength + ValueLength;
-
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal List<object> Keys = new List<object>(); // PrimaryKey + IndexKeys
 
         /// <summary>first start position in stream</summary>
         [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal long Pos;
@@ -21,14 +17,14 @@ namespace KeyValue
         [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal long NextPos;
 
         /// <summary>first start position of the KEYs in stream</summary>
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal long PosKeyStart => Pos + Size;
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal long KeyStartPos => Pos + Size;
         /// <summary>max value length of the KEYs</summary>
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal short KeyLength => 256;
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal short KeyLength => 32;
         /// <summary>Actual value length of the KEYs</summary>
         [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal short KeyActualLength;
 
         /// <summary>first start position of the VALUE in stream</summary>
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal long PosValueStart => Pos + Size + KeyLength;
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal long ValueStartPos => Pos + Size + KeyLength;
         /// <summary>Actual value length of the row</summary>
         [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal int ValueLength;
         /// <summary>max value length of the row</summary>
@@ -66,5 +62,29 @@ namespace KeyValue
 
             return true;
         }
+
+
+        internal static long GetPointer(long startPos, RowHeaderPointers pointer) => startPos + (int)pointer;
+
+        internal byte[] Data;
+        public int FillBytes(Stream s)
+        {
+            Data = new byte[Size + KeyLength];
+            return s.Read(Data);
+        }
+        public long GetPrevPos => BitConverter.ToInt64(Data, 0);
+        public long GetNextPos => BitConverter.ToInt64(Data, 8);
+        public short GetKeyActualLength => BitConverter.ToInt16(Data, 16);
+        public int GetValueLength => BitConverter.ToInt32(Data, 18);
+        public int GetValueActualLength => BitConverter.ToInt32(Data, 22);
+        public string GetPrimaryKey => System.Text.Encoding.UTF8.GetString(Data, Size, GetKeyActualLength);
+    }
+    internal enum RowHeaderPointers
+    {
+        PrevPos = 0,
+        NextPos = 8,
+        KeyActualLength = 16,
+        ValueLength = 18,
+        ValueActualLength = 22
     }
 }
