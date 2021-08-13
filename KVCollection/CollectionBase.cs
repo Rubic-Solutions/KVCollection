@@ -69,6 +69,12 @@ namespace KeyValue
                     {
                         writeBegin(null);
                     }
+
+                    var hs = new HashSet<string>();
+                    foreach (var rh in GetHeaders())
+                    {
+                        hs.Add(rh.GetPrimaryKey);
+                    }
                 }
             }
 
@@ -154,130 +160,66 @@ namespace KeyValue
 
         public bool Exists(string PrimaryKey)
         {
-            if (IsOpen)
-                using (var fs = reader())
-                {
-                    var pos = this.fh.FirstRecStartPos;
-                    fs.Seek(pos, SeekOrigin.Begin);
-                    while (pos > 0)
-                    {
-                        var rh = new RowHeader();
-                        if (rh.FillBytes(fs) == 0) break;
-                        rh.Pos = pos;
-
-                        if (rh.GetPrimaryKey == PrimaryKey) return true;
-
-                        // GoTo Next
-                        pos = rh.GetNextPos;
-                    }
-                }
+            foreach (var row in GetHeaders())
+                if (row.GetPrimaryKey == PrimaryKey) return true;
             return default;
         }
 
-
-        public KeyValuePair<RowHeader, byte[]> GetFirst()
+        public KeyValuePair<RowHeader, byte[]> GetFirst() => GetValue(this.fh.FirstRecStartPos);
+        public KeyValuePair<RowHeader, byte[]> GetLast() => GetValue(this.fh.LastRecStartPos);
+        public KeyValuePair<RowHeader, byte[]> GetValue(long Pos)
         {
-            if (IsOpen)
-                using (var fs = reader())
-                {
-                    fs.Seek(this.fh.FirstRecStartPos, SeekOrigin.Begin);
-                    var row = io_read_row(fs);
-                    row.Key.Pos = this.fh.FirstRecStartPos;
-                    return KeyValuePair.Create(row.Key, row.Value);
-                }
-            return default;
-        }
-        public KeyValuePair<RowHeader, byte[]> GetLast()
-        {
-            if (IsOpen)
-                using (var fs = reader())
-                {
-                    fs.Seek(this.fh.LastRecStartPos, SeekOrigin.Begin);
-                    var row = io_read_row(fs);
-                    row.Key.Pos = this.fh.FirstRecStartPos;
-                    return KeyValuePair.Create(row.Key, row.Value);
-                }
-            return default;
-        }
+            foreach (var row in Iterate(Pos, false))
+                return row;
 
+            return default;
+        }
         public byte[] GetValue(string PrimaryKey)
         {
-            if (IsOpen)
-                using (var fs = reader())
-                {
-                    var pos = this.fh.FirstRecStartPos;
-                    fs.Seek(pos, SeekOrigin.Begin);
-                    while (pos > 0)
-                    {
-                        var rh = new RowHeader();
-                        if (rh.FillBytes(fs) == 0) break;
-                        rh.Pos = pos;
+            foreach (var row in Iterate(this.fh.FirstRecStartPos, false))
+                if (row.Key.GetPrimaryKey == PrimaryKey)
+                    return row.Value;
 
-                        if (rh.GetPrimaryKey == PrimaryKey)
-                        {
-                            // Value
-                            var bytes = new byte[rh.GetValueLength];
-                            fs.Read(bytes);
-                            return bytes;
-                        }
-                        // skip Value
-                        fs.Read(new byte[rh.GetValueLength]);
-                        // GoTo Next
-                        pos = rh.GetNextPos;
-                    }
-                }
             return default;
         }
 
         public RowHeader GetHeader(string PrimaryKey)
         {
-            foreach (var rh in GetHeaders())
-                if (rh.GetPrimaryKey == PrimaryKey) return rh;
+            foreach (var row in Iterate(this.fh.FirstRecStartPos, true))
+                if (row.Key.GetPrimaryKey == PrimaryKey)
+                    return row.Key;
+
             return default;
         }
 
         public IEnumerable<RowHeader> GetHeaders()
         {
-            if (IsOpen)
-                using (var fs = reader())
-                {
-                    var pos = this.fh.FirstRecStartPos;
-                    fs.Seek(pos, SeekOrigin.Begin);
-                    while (pos > 0)
-                    {
-                        var row = io_read_row(fs, true);
-                        row.Key.Pos = this.fh.FirstRecStartPos;
-                        yield return row.Key;
-
-                        // GoTo Next
-                        pos = row.Key.GetNextPos;
-                    }
-                }
+            foreach (var row in Iterate(this.fh.FirstRecStartPos, true))
+                yield return row.Key;
         }
 
         /// <summary>Retrieves all the elements. </summary>
-        public IEnumerable<KeyValuePair<RowHeader, byte[]>> All()
-        {
-            if (IsOpen)
-                using (var fs = reader())
-                {
-                    var pos = this.fh.FirstRecStartPos;
-                    fs.Seek(pos, SeekOrigin.Begin);
-                    while (pos > 0)
-                    {
-                        var row = io_read_row(fs);
-                        row.Key.Pos = this.fh.FirstRecStartPos;
-                        yield return KeyValuePair.Create(row.Key, row.Value);
-
-                        // GoTo Next
-                        pos = row.Key.GetNextPos;
-                    }
-                }
-        }
+        public IEnumerable<KeyValuePair<RowHeader, byte[]>> All() => Iterate(this.fh.FirstRecStartPos,false);
+        /// <summary>Retrieves all the elements. </summary>
         public IEnumerable<KeyValuePair<RowHeader, T>> All<T>()
         {
             foreach (var row in All())
                 yield return KeyValuePair.Create(row.Key, Serializer.FromBytes<T>(row.Value));
+        }
+        private IEnumerable<KeyValuePair<RowHeader, byte[]>> Iterate(long StartPos, bool skipValue)
+        {
+            if (IsOpen)
+                using (var fs = reader())
+                {
+                    fs.Seek(StartPos, SeekOrigin.Begin);
+                    while (StartPos > 0)
+                    {
+                        var row = io_read_row(fs, StartPos, skipValue);
+                        yield return row;
+                        // GoTo Next
+                        StartPos = row.Key.GetNextPos;
+                    }
+                }
         }
         #endregion
 
@@ -374,7 +316,7 @@ namespace KeyValue
             if (rh.PrevPos != 0)
             {
                 this.cw.fs.Seek(rh.PrevPos, SeekOrigin.Begin);
-                var prev_row_header = io_read_row(this.cw.fs, true).Key;
+                var prev_row_header = io_read_row(this.cw.fs, rh.PrevPos, true).Key;
                 prev_row_header.NextPos = rh.NextPos;
                 io_write_row_header(prev_row_header);
             }
@@ -387,7 +329,7 @@ namespace KeyValue
             if (rh.NextPos != 0)
             {
                 this.cw.fs.Seek(rh.NextPos, SeekOrigin.Begin);
-                var next_row_header = io_read_row(this.cw.fs, true).Key;
+                var next_row_header = io_read_row(this.cw.fs, rh.NextPos, true).Key;
                 next_row_header.PrevPos = rh.PrevPos;
                 io_write_row_header(next_row_header);
             }
@@ -401,11 +343,12 @@ namespace KeyValue
 
         internal FileStream reader() => new FileStream(this.FileInfo.FullName, FileMode.OpenOrCreate, FileAccess.Read, FileShare.ReadWrite);
 
-        private KeyValuePair<RowHeader, byte[]> io_read_row(FileStream fs, bool skipValue = false)
+        private KeyValuePair<RowHeader, byte[]> io_read_row(FileStream fs, long pos, bool skipValue = false)
         {
             // row-header
             var rh = new RowHeader();
             rh.FillBytes(fs);
+            rh.Pos = pos;
             // Value
             if (skipValue)
             {

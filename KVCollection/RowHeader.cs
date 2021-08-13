@@ -66,11 +66,13 @@ namespace KeyValue
 
         internal static long GetPointer(long startPos, RowHeaderPointers pointer) => startPos + (int)pointer;
 
-        internal byte[] Data;
+        internal byte[] Data=new byte[26];
         public int FillBytes(Stream s)
         {
             Data = new byte[Size + KeyLength];
-            return s.Read(Data);
+            var retval = s.Read(Data);
+            //FromArray(Data);
+            return retval;
         }
         public long GetPrevPos => BitConverter.ToInt64(Data, 0);
         public long GetNextPos => BitConverter.ToInt64(Data, 8);
