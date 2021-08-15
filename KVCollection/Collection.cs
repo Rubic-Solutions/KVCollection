@@ -30,7 +30,16 @@ namespace KeyValue
             return KeyValuePair.Create(row.Key, Serializer.FromBytes<T>(row.Value));
         }
 
-        public new T GetValue(string PrimaryKey) => Serializer.FromBytes<T>(base.GetValue(PrimaryKey));
+        public new KeyValuePair<RowHeader, T> GetValue(long Pos)
+        {
+            var row = base.GetValue(Pos);
+            return KeyValuePair.Create(row.Key, Serializer.FromBytes<T>(row.Value));
+        }
+        public new KeyValuePair<RowHeader, T> GetValue(string PrimaryKey)
+        {
+            var row = base.GetValue(PrimaryKey);
+            return KeyValuePair.Create(row.Key, Serializer.FromBytes<T>(row.Value));
+        }
 
         public new IEnumerable<KeyValuePair<RowHeader, T>> All() => base.All<T>();
 

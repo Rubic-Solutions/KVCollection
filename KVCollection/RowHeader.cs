@@ -1,47 +1,46 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
 
 namespace KeyValue
 {
     public class RowHeader
     {
-        public string PrimaryKey;
-        public int KeySize => KeyActualLength;
-        public int ValueSize => ValueActualLength;
-        public int RowSize => Size + KeyLength + ValueLength;
-
         /// <summary>first start position in stream</summary>
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal long Pos;
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal long PrevPos;
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal long NextPos;
-
+        public long Pos;
         /// <summary>first start position of the KEYs in stream</summary>
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal long KeyStartPos => Pos + Size;
-        /// <summary>max value length of the KEYs</summary>
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal short KeyLength => 32;
-        /// <summary>Actual value length of the KEYs</summary>
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal short KeyActualLength;
-
+        internal long KeyStartPos => Pos + Size;
         /// <summary>first start position of the VALUE in stream</summary>
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal long ValueStartPos => Pos + Size + KeyLength;
-        /// <summary>Actual value length of the row</summary>
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal int ValueLength;
-        /// <summary>max value length of the row</summary>
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal int ValueActualLength;
+        internal long ValueStartPos => Pos + Size + KeyLength;
 
-
+        public int RowSize => Size + KeyLength + ValueLength;
         /// <summary>Size of ToArray output.</summary>
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal int Size => 8 + 8 + 2 + 4 + 4;
+        private int Size => 26; //8 + 8 + 2 + 4 + 4;
+        /// <summary>max value length of the KEYs</summary>
+        private short KeyLength => 32;
+        //---------------------------------------------------------------
+        //-- DATA
+        internal long PrevPos;
+        internal long NextPos;
+        /// <summary>Actual value length of the KEYs</summary>
+        internal short KeyActualLength;
+        /// <summary>Actual value length of the row</summary>
+        internal int ValueLength;
+        /// <summary>max value length of the row</summary>
+        internal int ValueActualLength;
+        public string PrimaryKey;
+        //---------------------------------------------------------------
 
-        internal byte[] ToArray()
+        internal byte[] ToArray(bool withPrimaryKey)
         {
-            var retval = Serializer.ConcatBytes(this.Size,
+            var key = System.Text.Encoding.UTF8.GetBytes(PrimaryKey);
+            this.KeyActualLength = (short)key.Length;
+            var retval = Serializer.ConcatBytes(this.Size + this.KeyLength,
                                                 BitConverter.GetBytes(PrevPos),             // 8
                                                 BitConverter.GetBytes(NextPos),             // 8
                                                 BitConverter.GetBytes(KeyActualLength),     // 2
                                                 BitConverter.GetBytes(ValueLength),         // 4
-                                                BitConverter.GetBytes(ValueActualLength));  // 4
+                                                BitConverter.GetBytes(ValueActualLength),
+                                                key);  // 4
             return retval;
         }
 
@@ -59,34 +58,28 @@ namespace KeyValue
             this.KeyActualLength = BitConverter.ToInt16(data, 16);      // +8
             this.ValueLength = BitConverter.ToInt32(data, 18);          // +2
             this.ValueActualLength = BitConverter.ToInt32(data, 22);    // +4
+            this.PrimaryKey = System.Text.Encoding.UTF8.GetString(data, 26, this.KeyActualLength);    // +32
 
             return true;
         }
 
 
-        internal static long GetPointer(long startPos, RowHeaderPointers pointer) => startPos + (int)pointer;
-
-        internal byte[] Data=new byte[26];
-        public int FillBytes(Stream s)
+        public void FillBytes(Stream s)
         {
-            Data = new byte[Size + KeyLength];
-            var retval = s.Read(Data);
-            //FromArray(Data);
-            return retval;
+            var bytes = new byte[Size + KeyLength];
+            var retval = s.Read(bytes);
+            FromArray(bytes);
         }
-        public long GetPrevPos => BitConverter.ToInt64(Data, 0);
-        public long GetNextPos => BitConverter.ToInt64(Data, 8);
-        public short GetKeyActualLength => BitConverter.ToInt16(Data, 16);
-        public int GetValueLength => BitConverter.ToInt32(Data, 18);
-        public int GetValueActualLength => BitConverter.ToInt32(Data, 22);
-        public string GetPrimaryKey => System.Text.Encoding.UTF8.GetString(Data, Size, GetKeyActualLength);
+        //internal static long GetPointer(long startPos, RowHeaderPointers pointer) => startPos + (int)pointer;
     }
-    internal enum RowHeaderPointers
-    {
-        PrevPos = 0,
-        NextPos = 8,
-        KeyActualLength = 16,
-        ValueLength = 18,
-        ValueActualLength = 22
-    }
+
+    //internal enum RowHeaderPointers
+    //{
+    //    PrevPos = 0,
+    //    NextPos = 8,
+    //    KeyActualLength = 16,
+    //    ValueLength = 18,
+    //    ValueActualLength = 22,
+    //    PrimaryKey = 26
+    //}
 }

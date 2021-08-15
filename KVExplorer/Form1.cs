@@ -26,6 +26,7 @@ namespace KVExplorer
             InitializeComponent();
 
             DGRID_LIST.Columns.Clear();
+            DGRID_LIST_SOURCE.Columns.Add("POS", typeof(long));
             DGRID_LIST_SOURCE.Columns.Add("KEYS", typeof(string));
             DGRID_LIST.DataBindingComplete += (o, _) =>
             {
@@ -37,6 +38,7 @@ namespace KVExplorer
                 }
             };
             DGRID_LIST.DataSource = DGRID_LIST_SOURCE;
+            DGRID_LIST.Columns["POS"].Visible = false;
             SetItem(-1);
         }
 
@@ -72,7 +74,8 @@ namespace KVExplorer
                 DGRID_LIST_SOURCE.BeginLoadData();
                 foreach (var item in kvFile.GetHeaders())
                 {
-                    DGRID_LIST_SOURCE.Rows.Add(item.GetPrimaryKey);
+                    //var pkey = item.GetPrimaryKey;
+                    DGRID_LIST_SOURCE.Rows.Add(item.Pos, item.PrimaryKey);
                 }
                 DGRID_LIST_SOURCE.EndLoadData();
             }, "Keys are being listed.");
@@ -96,7 +99,7 @@ namespace KVExplorer
                     for (int i = 0; i < 100; i++)
                         item = kvFile.GetFirst();
 
-                    MessageAdd("\tKey = " + item.Key.GetPrimaryKey);
+                    MessageAdd("\tKey = " + item.Key.PrimaryKey);
                 }, "Get First Record 100 times.");
 
             result = await DoWork(() =>
@@ -105,7 +108,7 @@ namespace KVExplorer
                     for (int i = 0; i < 100; i++)
                         item = kvFile.GetLast();
 
-                    MessageAdd("\tKey = " + item.Key.GetPrimaryKey);
+                    MessageAdd("\tKey = " + item.Key.PrimaryKey);
                 }, "Get Last Record 100 times.");
 
             return result.Success;
@@ -159,19 +162,22 @@ namespace KVExplorer
 
             if (this.EDIT_IS_EDIT)
             {
-                var pkey = (string)DGRID_LIST.Rows[SelIndex].Cells[0].Value;
+                var pos = (long)DGRID_LIST_SOURCE.Rows[SelIndex][0];
+                //var pkey = (string)DGRID_LIST.Rows[SelIndex].Cells[0].Value;
 
                 KeyValue.RowHeader head = null;
                 string data = null;
                 var result = await DoWork(() =>
                 {
-                    data = System.Text.Encoding.UTF8.GetString(kvFile.GetValue(pkey));
+                    var row = kvFile.GetValue(pos);
+                    head = row.Key;
+                    data = System.Text.Encoding.UTF8.GetString(row.Value);
                 }, null);
                 EDIT_VALUE.Text = data;
 
                 var txt = new List<string>();
                 txt.Add("Primary Key");
-                txt.Add("    " + pkey);
+                txt.Add("    " + head.PrimaryKey);
 
                 txt.Add("");
                 txt.Add("Elapsed");
