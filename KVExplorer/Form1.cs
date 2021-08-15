@@ -166,8 +166,12 @@ namespace KVExplorer
             EDIT_KEY.Enabled = this.EDIT_IS_NEW;
             EDIT_VALUE.Enabled = this.EDIT_IS_NEW || this.EDIT_IS_EDIT;
             BTN_NEW.Visible = kvFile.IsOpen;
-            BTN_SAV.Visible = (kvFile.IsOpen && EDIT_POS != -1);
-            BTN_DEL.Visible = this.EDIT_IS_EDIT;
+            // BTN_SAV
+            BTN_SAV.Enabled = (kvFile.IsOpen && EDIT_POS != -1);
+            EDIT_BTN_SetColor(BTN_SAV, System.Drawing.Color.ForestGreen, System.Drawing.Color.White);
+            // BTN_DEL
+            BTN_DEL.Enabled = this.EDIT_IS_EDIT;
+            EDIT_BTN_SetColor(BTN_DEL, System.Drawing.Color.OrangeRed, System.Drawing.Color.White);
 
             if (pos > 0)
             {
@@ -253,7 +257,7 @@ namespace KVExplorer
 
             result = await DoWork(() =>
             {
-                for (int i = 0; i < 5; i++)
+                for (int i = 0; i < 50000; i++)
                 {
                     var item = new testModel();
                     item.Name = "Person " + i;

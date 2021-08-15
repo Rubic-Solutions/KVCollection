@@ -269,6 +269,7 @@ namespace KVExplorer
             // 
             // BTN_NEW
             // 
+            this.BTN_NEW.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.BTN_NEW.BackColor = System.Drawing.Color.RoyalBlue;
             this.BTN_NEW.FlatAppearance.BorderColor = System.Drawing.Color.MidnightBlue;
             this.BTN_NEW.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
@@ -302,9 +303,10 @@ namespace KVExplorer
             // label3
             // 
             this.label3.AutoSize = true;
+            this.label3.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
             this.label3.Location = new System.Drawing.Point(261, 61);
             this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(83, 20);
+            this.label3.Size = new System.Drawing.Size(91, 20);
             this.label3.TabIndex = 30;
             this.label3.Text = "PrimaryKey";
             // 
@@ -325,12 +327,12 @@ namespace KVExplorer
             // 
             // BTN_DEL
             // 
-            this.BTN_DEL.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.BTN_DEL.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.BTN_DEL.BackColor = System.Drawing.Color.OrangeRed;
             this.BTN_DEL.FlatAppearance.BorderColor = System.Drawing.Color.MidnightBlue;
             this.BTN_DEL.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.BTN_DEL.ForeColor = System.Drawing.Color.White;
-            this.BTN_DEL.Location = new System.Drawing.Point(670, 12);
+            this.BTN_DEL.Location = new System.Drawing.Point(670, 353);
             this.BTN_DEL.Name = "BTN_DEL";
             this.BTN_DEL.Size = new System.Drawing.Size(67, 29);
             this.BTN_DEL.TabIndex = 28;
@@ -359,18 +361,20 @@ namespace KVExplorer
             // label2
             // 
             this.label2.AutoSize = true;
+            this.label2.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
             this.label2.Location = new System.Drawing.Point(261, 120);
             this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(45, 20);
+            this.label2.Size = new System.Drawing.Size(47, 20);
             this.label2.TabIndex = 15;
             this.label2.Text = "Value";
             // 
             // label1
             // 
             this.label1.AutoSize = true;
+            this.label1.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
             this.label1.Location = new System.Drawing.Point(14, 61);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(58, 20);
+            this.label1.Size = new System.Drawing.Size(59, 20);
             this.label1.TabIndex = 14;
             this.label1.Text = "Header";
             // 
@@ -387,17 +391,18 @@ namespace KVExplorer
             this.EDIT_VALUE.Multiline = true;
             this.EDIT_VALUE.Name = "EDIT_VALUE";
             this.EDIT_VALUE.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.EDIT_VALUE.Size = new System.Drawing.Size(476, 239);
+            this.EDIT_VALUE.Size = new System.Drawing.Size(476, 204);
             this.EDIT_VALUE.TabIndex = 12;
             this.EDIT_VALUE.WordWrap = false;
             // 
             // BTN_SAV
             // 
+            this.BTN_SAV.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.BTN_SAV.BackColor = System.Drawing.Color.ForestGreen;
             this.BTN_SAV.FlatAppearance.BorderColor = System.Drawing.Color.MidnightBlue;
             this.BTN_SAV.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.BTN_SAV.ForeColor = System.Drawing.Color.White;
-            this.BTN_SAV.Location = new System.Drawing.Point(261, 12);
+            this.BTN_SAV.Location = new System.Drawing.Point(261, 353);
             this.BTN_SAV.Name = "BTN_SAV";
             this.BTN_SAV.Size = new System.Drawing.Size(57, 29);
             this.BTN_SAV.TabIndex = 27;
