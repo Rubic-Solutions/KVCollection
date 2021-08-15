@@ -43,11 +43,16 @@ namespace KVExplorer
             this.DGRID_LIST = new System.Windows.Forms.DataGridView();
             this.Keys = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.BTN_CLOSE = new System.Windows.Forms.Button();
+            this.BTN_NEW = new System.Windows.Forms.Button();
             this.panel2 = new System.Windows.Forms.Panel();
+            this.label3 = new System.Windows.Forms.Label();
+            this.EDIT_KEY = new System.Windows.Forms.TextBox();
+            this.BTN_DEL = new System.Windows.Forms.Button();
             this.EDIT_HDR = new System.Windows.Forms.TextBox();
             this.label2 = new System.Windows.Forms.Label();
             this.label1 = new System.Windows.Forms.Label();
             this.EDIT_VALUE = new System.Windows.Forms.TextBox();
+            this.BTN_SAV = new System.Windows.Forms.Button();
             this.MESSAGE_LIST = new System.Windows.Forms.ListBox();
             this.statusStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer2)).BeginInit();
@@ -74,10 +79,10 @@ namespace KVExplorer
             this.statusStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.statusTitle,
             this.statusSpacer});
-            this.statusStrip1.Location = new System.Drawing.Point(0, 534);
+            this.statusStrip1.Location = new System.Drawing.Point(0, 567);
             this.statusStrip1.Name = "statusStrip1";
             this.statusStrip1.RenderMode = System.Windows.Forms.ToolStripRenderMode.Professional;
-            this.statusStrip1.Size = new System.Drawing.Size(1043, 26);
+            this.statusStrip1.Size = new System.Drawing.Size(996, 26);
             this.statusStrip1.TabIndex = 5;
             this.statusStrip1.Text = "statusStrip1";
             // 
@@ -90,7 +95,7 @@ namespace KVExplorer
             // statusSpacer
             // 
             this.statusSpacer.Name = "statusSpacer";
-            this.statusSpacer.Size = new System.Drawing.Size(942, 20);
+            this.statusSpacer.Size = new System.Drawing.Size(895, 20);
             this.statusSpacer.Spring = true;
             // 
             // splitContainer2
@@ -111,8 +116,8 @@ namespace KVExplorer
             // splitContainer2.Panel2
             // 
             this.splitContainer2.Panel2.Controls.Add(this.MESSAGE_LIST);
-            this.splitContainer2.Size = new System.Drawing.Size(1040, 526);
-            this.splitContainer2.SplitterDistance = 402;
+            this.splitContainer2.Size = new System.Drawing.Size(993, 559);
+            this.splitContainer2.SplitterDistance = 392;
             this.splitContainer2.TabIndex = 7;
             // 
             // splitContainer1
@@ -129,8 +134,8 @@ namespace KVExplorer
             // splitContainer1.Panel2
             // 
             this.splitContainer1.Panel2.Controls.Add(this.panel2);
-            this.splitContainer1.Size = new System.Drawing.Size(1040, 402);
-            this.splitContainer1.SplitterDistance = 230;
+            this.splitContainer1.Size = new System.Drawing.Size(993, 392);
+            this.splitContainer1.SplitterDistance = 240;
             this.splitContainer1.TabIndex = 6;
             // 
             // panel3
@@ -141,12 +146,13 @@ namespace KVExplorer
             this.panel3.Controls.Add(this.DGRID_FILTER);
             this.panel3.Controls.Add(this.DGRID_LIST);
             this.panel3.Controls.Add(this.BTN_CLOSE);
+            this.panel3.Controls.Add(this.BTN_NEW);
             this.panel3.Cursor = System.Windows.Forms.Cursors.Default;
             this.panel3.Dock = System.Windows.Forms.DockStyle.Fill;
             this.panel3.Location = new System.Drawing.Point(0, 0);
             this.panel3.Name = "panel3";
             this.panel3.Padding = new System.Windows.Forms.Padding(5);
-            this.panel3.Size = new System.Drawing.Size(230, 402);
+            this.panel3.Size = new System.Drawing.Size(240, 392);
             this.panel3.TabIndex = 0;
             // 
             // BTN_TEST
@@ -156,7 +162,7 @@ namespace KVExplorer
             this.BTN_TEST.FlatAppearance.BorderColor = System.Drawing.Color.Gainsboro;
             this.BTN_TEST.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.BTN_TEST.ForeColor = System.Drawing.Color.Black;
-            this.BTN_TEST.Location = new System.Drawing.Point(170, 12);
+            this.BTN_TEST.Location = new System.Drawing.Point(180, 12);
             this.BTN_TEST.Name = "BTN_TEST";
             this.BTN_TEST.Size = new System.Drawing.Size(55, 29);
             this.BTN_TEST.TabIndex = 24;
@@ -187,7 +193,7 @@ namespace KVExplorer
             this.DGRID_FILTER.Location = new System.Drawing.Point(5, 61);
             this.DGRID_FILTER.Name = "DGRID_FILTER";
             this.DGRID_FILTER.PlaceholderText = "Search";
-            this.DGRID_FILTER.Size = new System.Drawing.Size(220, 20);
+            this.DGRID_FILTER.Size = new System.Drawing.Size(230, 20);
             this.DGRID_FILTER.TabIndex = 21;
             this.DGRID_FILTER.TextChanged += new System.EventHandler(this.DGRID_FILTER_TextChanged);
             // 
@@ -232,7 +238,7 @@ namespace KVExplorer
             this.DGRID_LIST.ShowCellToolTips = false;
             this.DGRID_LIST.ShowEditingIcon = false;
             this.DGRID_LIST.ShowRowErrors = false;
-            this.DGRID_LIST.Size = new System.Drawing.Size(220, 308);
+            this.DGRID_LIST.Size = new System.Drawing.Size(230, 298);
             this.DGRID_LIST.TabIndex = 19;
             this.DGRID_LIST.SelectionChanged += new System.EventHandler(this.DGRID_SelChanged);
             // 
@@ -261,20 +267,76 @@ namespace KVExplorer
             this.BTN_CLOSE.Visible = false;
             this.BTN_CLOSE.Click += new System.EventHandler(this.BTN_CLOSE_Click);
             // 
+            // BTN_NEW
+            // 
+            this.BTN_NEW.BackColor = System.Drawing.Color.RoyalBlue;
+            this.BTN_NEW.FlatAppearance.BorderColor = System.Drawing.Color.MidnightBlue;
+            this.BTN_NEW.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.BTN_NEW.ForeColor = System.Drawing.Color.White;
+            this.BTN_NEW.Location = new System.Drawing.Point(170, 12);
+            this.BTN_NEW.Name = "BTN_NEW";
+            this.BTN_NEW.Size = new System.Drawing.Size(62, 29);
+            this.BTN_NEW.TabIndex = 27;
+            this.BTN_NEW.Text = "New";
+            this.BTN_NEW.UseVisualStyleBackColor = false;
+            // 
             // panel2
             // 
             this.panel2.AutoScroll = true;
             this.panel2.BackColor = System.Drawing.Color.White;
+            this.panel2.Controls.Add(this.label3);
+            this.panel2.Controls.Add(this.EDIT_KEY);
+            this.panel2.Controls.Add(this.BTN_DEL);
             this.panel2.Controls.Add(this.EDIT_HDR);
             this.panel2.Controls.Add(this.label2);
             this.panel2.Controls.Add(this.label1);
             this.panel2.Controls.Add(this.EDIT_VALUE);
+            this.panel2.Controls.Add(this.BTN_SAV);
             this.panel2.Cursor = System.Windows.Forms.Cursors.Default;
             this.panel2.Dock = System.Windows.Forms.DockStyle.Fill;
             this.panel2.Location = new System.Drawing.Point(0, 0);
             this.panel2.Name = "panel2";
-            this.panel2.Size = new System.Drawing.Size(806, 402);
+            this.panel2.Size = new System.Drawing.Size(749, 392);
             this.panel2.TabIndex = 0;
+            // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Location = new System.Drawing.Point(261, 61);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(83, 20);
+            this.label3.TabIndex = 30;
+            this.label3.Text = "PrimaryKey";
+            // 
+            // EDIT_KEY
+            // 
+            this.EDIT_KEY.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.EDIT_KEY.BackColor = System.Drawing.Color.FloralWhite;
+            this.EDIT_KEY.CausesValidation = false;
+            this.EDIT_KEY.Cursor = System.Windows.Forms.Cursors.Default;
+            this.EDIT_KEY.Location = new System.Drawing.Point(261, 87);
+            this.EDIT_KEY.MinimumSize = new System.Drawing.Size(4, 25);
+            this.EDIT_KEY.Name = "EDIT_KEY";
+            this.EDIT_KEY.Size = new System.Drawing.Size(476, 27);
+            this.EDIT_KEY.TabIndex = 29;
+            this.EDIT_KEY.WordWrap = false;
+            // 
+            // BTN_DEL
+            // 
+            this.BTN_DEL.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.BTN_DEL.BackColor = System.Drawing.Color.OrangeRed;
+            this.BTN_DEL.FlatAppearance.BorderColor = System.Drawing.Color.MidnightBlue;
+            this.BTN_DEL.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.BTN_DEL.ForeColor = System.Drawing.Color.White;
+            this.BTN_DEL.Location = new System.Drawing.Point(670, 12);
+            this.BTN_DEL.Name = "BTN_DEL";
+            this.BTN_DEL.Size = new System.Drawing.Size(67, 29);
+            this.BTN_DEL.TabIndex = 28;
+            this.BTN_DEL.Text = "Delete";
+            this.BTN_DEL.UseVisualStyleBackColor = false;
+            this.BTN_DEL.Click += new System.EventHandler(this.BTN_DEL_Click);
             // 
             // EDIT_HDR
             // 
@@ -284,20 +346,20 @@ namespace KVExplorer
             this.EDIT_HDR.BorderStyle = System.Windows.Forms.BorderStyle.None;
             this.EDIT_HDR.CausesValidation = false;
             this.EDIT_HDR.Cursor = System.Windows.Forms.Cursors.Default;
-            this.EDIT_HDR.Location = new System.Drawing.Point(14, 61);
+            this.EDIT_HDR.Location = new System.Drawing.Point(14, 87);
             this.EDIT_HDR.MinimumSize = new System.Drawing.Size(4, 150);
             this.EDIT_HDR.Multiline = true;
             this.EDIT_HDR.Name = "EDIT_HDR";
             this.EDIT_HDR.ReadOnly = true;
             this.EDIT_HDR.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.EDIT_HDR.Size = new System.Drawing.Size(241, 331);
+            this.EDIT_HDR.Size = new System.Drawing.Size(241, 295);
             this.EDIT_HDR.TabIndex = 25;
             this.EDIT_HDR.WordWrap = false;
             // 
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(261, 38);
+            this.label2.Location = new System.Drawing.Point(261, 120);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(45, 20);
             this.label2.TabIndex = 15;
@@ -306,7 +368,7 @@ namespace KVExplorer
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(14, 38);
+            this.label1.Location = new System.Drawing.Point(14, 61);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(58, 20);
             this.label1.TabIndex = 14;
@@ -317,18 +379,31 @@ namespace KVExplorer
             this.EDIT_VALUE.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.EDIT_VALUE.BackColor = System.Drawing.Color.WhiteSmoke;
+            this.EDIT_VALUE.BackColor = System.Drawing.Color.FloralWhite;
             this.EDIT_VALUE.CausesValidation = false;
             this.EDIT_VALUE.Cursor = System.Windows.Forms.Cursors.Default;
-            this.EDIT_VALUE.Location = new System.Drawing.Point(261, 61);
+            this.EDIT_VALUE.Location = new System.Drawing.Point(261, 143);
             this.EDIT_VALUE.MinimumSize = new System.Drawing.Size(4, 150);
             this.EDIT_VALUE.Multiline = true;
             this.EDIT_VALUE.Name = "EDIT_VALUE";
-            this.EDIT_VALUE.ReadOnly = true;
             this.EDIT_VALUE.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.EDIT_VALUE.Size = new System.Drawing.Size(533, 331);
+            this.EDIT_VALUE.Size = new System.Drawing.Size(476, 239);
             this.EDIT_VALUE.TabIndex = 12;
             this.EDIT_VALUE.WordWrap = false;
+            // 
+            // BTN_SAV
+            // 
+            this.BTN_SAV.BackColor = System.Drawing.Color.ForestGreen;
+            this.BTN_SAV.FlatAppearance.BorderColor = System.Drawing.Color.MidnightBlue;
+            this.BTN_SAV.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.BTN_SAV.ForeColor = System.Drawing.Color.White;
+            this.BTN_SAV.Location = new System.Drawing.Point(261, 12);
+            this.BTN_SAV.Name = "BTN_SAV";
+            this.BTN_SAV.Size = new System.Drawing.Size(57, 29);
+            this.BTN_SAV.TabIndex = 27;
+            this.BTN_SAV.Text = "Save";
+            this.BTN_SAV.UseVisualStyleBackColor = false;
+            this.BTN_SAV.Click += new System.EventHandler(this.BTN_SAV_Click);
             // 
             // MESSAGE_LIST
             // 
@@ -340,14 +415,14 @@ namespace KVExplorer
             this.MESSAGE_LIST.ItemHeight = 20;
             this.MESSAGE_LIST.Location = new System.Drawing.Point(0, 0);
             this.MESSAGE_LIST.Name = "MESSAGE_LIST";
-            this.MESSAGE_LIST.Size = new System.Drawing.Size(1040, 120);
+            this.MESSAGE_LIST.Size = new System.Drawing.Size(993, 163);
             this.MESSAGE_LIST.TabIndex = 1;
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 20F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1043, 560);
+            this.ClientSize = new System.Drawing.Size(996, 593);
             this.Controls.Add(this.splitContainer2);
             this.Controls.Add(this.statusStrip1);
             this.Name = "Form1";
@@ -393,6 +468,11 @@ namespace KVExplorer
         private System.Windows.Forms.Button BTN_OPEN;
         private System.Windows.Forms.TextBox EDIT_HDR;
         private System.Windows.Forms.Button BTN_TEST;
+        private System.Windows.Forms.Button BTN_DEL;
+        private System.Windows.Forms.Button BTN_SAV;
+        private System.Windows.Forms.TextBox EDIT_KEY;
+        private System.Windows.Forms.Label label3;
+        private System.Windows.Forms.Button BTN_NEW;
     }
 }
 

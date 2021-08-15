@@ -35,6 +35,7 @@ namespace KVExplorer
                 {
                     //dataGridView.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells;
                     dataGridView.Columns[0].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+                    dataGridView.Columns[1].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
                 }
             };
             DGRID_LIST.DataSource = DGRID_LIST_SOURCE;
@@ -65,7 +66,7 @@ namespace KVExplorer
         private async Task<bool> loadKeys()
         {
             DGRID_LIST_SOURCE.Clear();
-            DGRID_SEL_INX = -1;
+            SetItem(-1);
 
             var result = await DoWork(() =>
             {
@@ -75,7 +76,7 @@ namespace KVExplorer
                 foreach (var item in kvFile.GetHeaders())
                 {
                     //var pkey = item.GetPrimaryKey;
-                    DGRID_LIST_SOURCE.Rows.Add(item.Pos, item.PrimaryKey);
+                    DGRID_LIST_SOURCE.Rows.Add(item.RootPos, item.PrimaryKey);
                 }
                 DGRID_LIST_SOURCE.EndLoadData();
             }, "Keys are being listed.");
@@ -99,7 +100,8 @@ namespace KVExplorer
                     for (int i = 0; i < 100; i++)
                         item = kvFile.GetFirst();
 
-                    MessageAdd("\tKey = " + item.Key.PrimaryKey);
+                    if (item.Key is object)
+                        MessageAdd("\tKey = " + item.Key.PrimaryKey);
                 }, "Get First Record 100 times.");
 
             result = await DoWork(() =>
@@ -108,7 +110,8 @@ namespace KVExplorer
                     for (int i = 0; i < 100; i++)
                         item = kvFile.GetLast();
 
-                    MessageAdd("\tKey = " + item.Key.PrimaryKey);
+                    if (item.Key is object)
+                        MessageAdd("\tKey = " + item.Key.PrimaryKey);
                 }, "Get Last Record 100 times.");
 
             return result.Success;
@@ -126,7 +129,6 @@ namespace KVExplorer
             this.Text = "KV Explorer";
             kvFile.Close();
             DGRID_LIST_SOURCE.Clear();
-            DGRID_SEL_INX = -1;
             SetItem(-1);
             BTN_CLOSE.Visible = false;
             BTN_OPEN.Visible = true;
@@ -141,47 +143,57 @@ namespace KVExplorer
         }
         private void DGRID_SelChanged(object sender, EventArgs e)
         {
-            DGRID_SEL_INX = -1;
+            long selPos = 0;
             if (DGRID_LIST.SelectedRows.Count > 0)
                 if (DGRID_LIST.SelectedCells.Count > 0)
-                    SetItem(DGRID_LIST.SelectedRows[0].Index);
+                {
+                    selPos = (long)DGRID_LIST_SOURCE.Rows[DGRID_LIST.SelectedRows[0].Index][0];
+                }
+
+            SetItem(selPos);
         }
         #endregion
 
         #region "EDIT"
-        private int DGRID_SEL_INX = -1;
-        private bool EDIT_IS_NEW => (DGRID_SEL_INX == -1);
-        private bool EDIT_IS_EDIT => (DGRID_SEL_INX != -1);
-        private async void SetItem(int SelIndex)
+        private bool EDIT_IS_NEW => (kvFile.IsOpen && EDIT_POS == 0);
+        private bool EDIT_IS_EDIT => (kvFile.IsOpen && EDIT_POS > 1);
+        private async void SetItem(long pos)
         {
             EDIT_HDR.Text = string.Empty;
+            EDIT_KEY.Text = string.Empty;
             EDIT_VALUE.Text = string.Empty;
+            EDIT_POS = pos;
+            EDIT_KEY.Enabled = this.EDIT_IS_NEW;
+            EDIT_VALUE.Enabled = this.EDIT_IS_NEW || this.EDIT_IS_EDIT;
+            BTN_NEW.Visible = kvFile.IsOpen;
+            BTN_SAV.Visible = (kvFile.IsOpen && EDIT_POS != -1);
+            BTN_DEL.Visible = this.EDIT_IS_EDIT;
 
-            DGRID_SEL_INX = SelIndex;
-            EDIT_VALUE.ReadOnly = false;
-
-            if (this.EDIT_IS_EDIT)
+            if (pos > 0)
             {
-                var pos = (long)DGRID_LIST_SOURCE.Rows[SelIndex][0];
-                //var pkey = (string)DGRID_LIST.Rows[SelIndex].Cells[0].Value;
-
                 KeyValue.RowHeader head = null;
                 string data = null;
                 var result = await DoWork(() =>
                 {
-                    var row = kvFile.GetValue(pos);
+                    var row = kvFile.GetValue(EDIT_POS);
                     head = row.Key;
                     data = System.Text.Encoding.UTF8.GetString(row.Value);
                 }, null);
+                EDIT_KEY.Text = head.PrimaryKey;
                 EDIT_VALUE.Text = data;
 
                 var txt = new List<string>();
                 txt.Add("Primary Key");
                 txt.Add("    " + head.PrimaryKey);
-
+                txt.Add("");
+                txt.Add("Pos (pointer)");
+                txt.Add("    " + head.RootPos);
+                txt.Add("");
+                txt.Add("Value Length (Size on disk)");
+                txt.Add("    " + head.ValueActualSize + " (" + head.ValueSize + ") byte(s)");
                 txt.Add("");
                 txt.Add("Elapsed");
-                txt.Add("    " + result.Duration.ToString(@"ss\.fffffff"));
+                txt.Add("    " + result.Duration.ToString(@"ss\.fffffff") + " sec.");
 
                 EDIT_HDR.Text = string.Join(Environment.NewLine, txt);
             }
@@ -191,6 +203,24 @@ namespace KVExplorer
             btn.BackColor = btn.Enabled ? bgColor : System.Drawing.Color.WhiteSmoke;
             btn.ForeColor = btn.Enabled ? color : System.Drawing.Color.Silver;
             btn.FlatAppearance.BorderColor = btn.Enabled ? bgColor : System.Drawing.Color.WhiteSmoke;
+        }
+        private long EDIT_POS = 0;
+        private async void BTN_SAV_Click(object sender, EventArgs e)
+        {
+            var result = await DoWork(() =>
+            {
+                if (EDIT_IS_NEW)
+                    kvFile.Add(EDIT_KEY.Text, KeyValue.Serializer.GetBytes(EDIT_VALUE.Text));
+                else
+                    kvFile.Update(EDIT_KEY.Text, KeyValue.Serializer.GetBytes(EDIT_VALUE.Text));
+            }, "Item has been saved.");
+        }
+        private async void BTN_DEL_Click(object sender, EventArgs e)
+        {
+            var result = await DoWork(() =>
+            {
+                kvFile.Delete(EDIT_KEY.Text);
+            }, "Item has been deleted.");
         }
         #endregion
 
@@ -223,7 +253,7 @@ namespace KVExplorer
 
             result = await DoWork(() =>
             {
-                for (int i = 1; i < 500000; i++)
+                for (int i = 0; i < 5; i++)
                 {
                     var item = new testModel();
                     item.Name = "Person " + i;
@@ -231,13 +261,15 @@ namespace KVExplorer
                     item.BirtDate = new DateTime(DateTime.Now.Year - item.Age, (i % 12) + 1, 1);
                     item.IsAdult = item.Age > 18;
 
-                    kvFile.Add("Key-" + i, KeyValue.Serializer.ToBytes(item));
+                    kvFile.Add("Key-" + i, KeyValue.Serializer.GetBytes(item));
                 }
             }, "Sample records are being generated.");
 
             if (result.Success == false) return;
-            await loadKeys();
 
+            kvFile.Close();
+
+            await file_set(DIALOG_SAVE.FileName);
         }
 
         private class testModel
@@ -291,12 +323,12 @@ namespace KVExplorer
                     {
                         fn();
                         if (msgIndex != -1)
-                            MESSAGE_LIST.Items[msgIndex] = StatusText + " (" + sw.Elapsed.ToString() + ")";
+                            MESSAGE_LIST.Items[msgIndex] = StatusText + " (" + sw.Elapsed.ToString(@"ss\.fffffff") + " sec.)";
                         retval.Success = true;
                     }
                     catch (Exception ex)
                     {
-                        MessageAdd("ERROR:" + ex.Message + " (" + sw.Elapsed.ToString() + ")");
+                        MessageAdd("ERROR:" + ex.Message + " (" + sw.Elapsed.ToString(@"ss\.fffffff") + " sec.)");
                     }
                     MESSAGE_LIST.SelectedIndex = MESSAGE_LIST.Items.Count - 1;
                     sw.Stop();
@@ -309,5 +341,6 @@ namespace KVExplorer
             return retval;
         }
         #endregion
+
     }
 }

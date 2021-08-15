@@ -16,12 +16,17 @@ namespace KeyValue
             IgnoreNullValues = true
         };
 
-        public static byte[] ToBytes(object obj) => enc.GetBytes(ToString(obj));
-        public static T FromBytes<T>(byte[] bytes) => (bytes == null || bytes.Length == 0) ? default : FromString<T>(enc.GetString(bytes));
-        internal static T FromBytes<T>(byte[] bytes, int index, int count) => (bytes == null || bytes.Length == 0) ? default : FromString<T>(enc.GetString(bytes, index, count));
+        public static byte[] GetBytes(string obj) => enc.GetBytes(obj);
+        public static byte[] GetBytes<K>(K obj) => enc.GetBytes(ToJson(obj));
 
-        public static string ToString(object obj) => JsonSerializer.Serialize(obj, serialize_opt);
-        public static T FromString<T>(string data) => JsonSerializer.Deserialize<T>(data, serialize_opt);
+        public static string GetString(byte[] bytes) => GetString(bytes, 0, bytes.Length);
+        public static string GetString(byte[] bytes, int index, int count) => (bytes == null || bytes.Length == 0) ? default : enc.GetString(bytes, index, count);
+
+        public static T GetObject<T>(byte[] bytes) => GetObject<T>(bytes, 0, bytes.Length);
+        internal static T GetObject<T>(byte[] bytes, int index, int count) => (bytes == null || bytes.Length == 0) ? default : FromJson<T>(enc.GetString(bytes, index, count));
+
+        public static string ToJson(object obj) => JsonSerializer.Serialize(obj, serialize_opt);
+        public static T FromJson<T>(string data) => JsonSerializer.Deserialize<T>(data, serialize_opt);
 
 
         internal static byte[] ConcatBytes(int Size, params byte[][] datas)

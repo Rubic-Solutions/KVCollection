@@ -76,10 +76,13 @@ namespace KeyValue
                     }
 
                     var headers = GetHeaders().ToList();
-                    foreach (var rh in headers)
-                        hs.Add(rh.PrimaryKey);
+                    if (headers.Count > 0)
+                    {
+                        foreach (var rh in headers)
+                            hs.Add(rh.PrimaryKey);
 
-                    lastRow = headers[headers.Count - 1];
+                        lastRow = headers[headers.Count - 1];
+                    }
                 }
             }
 
@@ -163,7 +166,7 @@ namespace KeyValue
             if (rh == null) return;
             WriteBegin(() => delete(rh));
             // lastRow info must be set after commit.
-            if (rh.Pos == lastRow.Pos) lastRow = GetLast().Key;
+            if (rh.RootPos == lastRow.RootPos) lastRow = GetLast().Key;
         }
 
         /// <summary>All records is removed from collection, and file is shrinked.</summary>
@@ -183,14 +186,14 @@ namespace KeyValue
         public KeyValuePair<RowHeader, byte[]> GetLast() => GetValue(this.fh.LastRecStartPos);
         public KeyValuePair<RowHeader, byte[]> GetValue(long Pos)
         {
-            foreach (var row in Iterate(Pos, false))
+            foreach (var row in io_read_rows(Pos, true))
                 return row;
 
             return default;
         }
         public KeyValuePair<RowHeader, byte[]> GetValue(string PrimaryKey)
         {
-            foreach (var row in Iterate(this.fh.FirstRecStartPos, false))
+            foreach (var row in All())
                 if (row.Key.PrimaryKey == PrimaryKey)
                     return row;
 
@@ -199,41 +202,26 @@ namespace KeyValue
 
         public RowHeader GetHeader(string PrimaryKey)
         {
-            foreach (var row in Iterate(this.fh.FirstRecStartPos, true))
-                if (row.Key.PrimaryKey == PrimaryKey)
-                    return row.Key;
+            foreach (var rh in GetHeaders())
+                if (rh.PrimaryKey == PrimaryKey)
+                    return rh;
 
             return default;
         }
 
         public IEnumerable<RowHeader> GetHeaders()
         {
-            foreach (var row in Iterate(this.fh.FirstRecStartPos, true))
+            foreach (var row in io_read_rows(this.fh.FirstRecStartPos, false))
                 yield return row.Key;
         }
 
         /// <summary>Retrieves all the elements. </summary>
-        public IEnumerable<KeyValuePair<RowHeader, byte[]>> All() => Iterate(this.fh.FirstRecStartPos, false);
+        public IEnumerable<KeyValuePair<RowHeader, byte[]>> All() => io_read_rows(this.fh.FirstRecStartPos, true);
         /// <summary>Retrieves all the elements. </summary>
         public IEnumerable<KeyValuePair<RowHeader, T>> All<T>()
         {
             foreach (var row in All())
-                yield return KeyValuePair.Create(row.Key, Serializer.FromBytes<T>(row.Value));
-        }
-        private IEnumerable<KeyValuePair<RowHeader, byte[]>> Iterate(long StartPos, bool skipValue)
-        {
-            if (IsOpen)
-                using (var fs = reader())
-                {
-                    fs.Seek(StartPos, SeekOrigin.Begin);
-                    while (StartPos > 0)
-                    {
-                        var row = io_read_row(fs, StartPos, skipValue);
-                        yield return row;
-                        // GoTo Next
-                        StartPos = row.Key.NextPos;
-                    }
-                }
+                yield return KeyValuePair.Create(row.Key, Serializer.GetObject<T>(row.Value));
         }
         #endregion
 
@@ -257,7 +245,7 @@ namespace KeyValue
             {
                 if (lastRow is object)
                 {
-                    newPos = lastRow.Pos + lastRow.RowSize;
+                    newPos = lastRow.RootPos + lastRow.RowSize;
                     lastRow.NextPos = newPos;
                     io_write_row_header(lastRow);
                 }
@@ -265,15 +253,15 @@ namespace KeyValue
 
             var rh = new RowHeader();
             { // header of new record
-                rh.Pos = newPos;
+                rh.RootPos = newPos;
                 rh.PrevPos = this.fh.Count > 0 ? this.fh.LastRecStartPos : 0;
-                rh.ValueLength = Value.Length;
-                rh.ValueActualLength = Value.Length;
+                rh.ValueSize = Value.Length;
+                rh.ValueActualSize = Value.Length;
                 rh.PrimaryKey = PrimaryKey;
             }
 
             { // header of the file is being updated
-                this.fh.LastRecStartPos = rh.Pos;   // last position is new record-position
+                this.fh.LastRecStartPos = rh.RootPos;   // last position is new record-position
                 this.fh.Count++;
             }
 
@@ -290,7 +278,7 @@ namespace KeyValue
 
             // if there is a next record and also new value is longer than old value,
             // then delete old record and insert as new.
-            if (Value.Length > rh.ValueActualLength && rh.NextPos != 0)
+            if (Value.Length > rh.ValueActualSize && rh.NextPos != 0)
             {
                 delete(rh);
                 return insert(rh.PrimaryKey, Value);
@@ -313,7 +301,7 @@ namespace KeyValue
                 }
                 */
 
-                rh.ValueLength = Value.Length;
+                rh.ValueActualSize = Value.Length;
                 { // record is being written
                     io_write_row_header(rh, true);
                     io_write_row_value(rh, Value);
@@ -329,7 +317,7 @@ namespace KeyValue
             if (rh.PrevPos != 0)
             {
                 this.cw.fs.Seek(rh.PrevPos, SeekOrigin.Begin);
-                var prev_row_header = io_read_row(this.cw.fs, rh.PrevPos, true).Key;
+                var prev_row_header = io_read_row(this.cw.fs, rh.PrevPos, false).Key;
                 prev_row_header.NextPos = rh.NextPos;
                 io_write_row_header(prev_row_header);
             }
@@ -342,7 +330,7 @@ namespace KeyValue
             if (rh.NextPos != 0)
             {
                 this.cw.fs.Seek(rh.NextPos, SeekOrigin.Begin);
-                var next_row_header = io_read_row(this.cw.fs, rh.NextPos, true).Key;
+                var next_row_header = io_read_row(this.cw.fs, rh.NextPos, false).Key;
                 next_row_header.PrevPos = rh.PrevPos;
                 io_write_row_header(next_row_header);
             }
@@ -354,35 +342,62 @@ namespace KeyValue
             this.fh.Count--;
         }
 
-        internal FileStream reader() => new FileStream(this.FileInfo.FullName,
-            FileMode.OpenOrCreate,
-            FileAccess.Read,
-            FileShare.ReadWrite,
-            4096 * 4,
-            FileOptions.SequentialScan);
-
-        private KeyValuePair<RowHeader, byte[]> io_read_row(FileStream fs, long pos, bool skipValue = false)
+        private IEnumerable<KeyValuePair<RowHeader, byte[]>> io_read_rows(long StartPos, bool readValue)
         {
-            // row-header
-            var rh = new RowHeader();
-            rh.FillBytes(fs);
-            rh.Pos = pos;
-            // Value
-            var len = rh.ValueLength;
-            if (skipValue)
-            {
-                //fs.Seek(rh.GetValueLength, SeekOrigin.Current);
-                //fs.Read(new byte[len]);
-                fs.Read(new byte[len], 0, len);
-                return KeyValuePair.Create(rh, new byte[0]);
-            }
-            else
-            {
-                var bytes = new byte[len];
-                fs.Read(bytes);
-                return KeyValuePair.Create(rh, bytes);
-            }
+            if (IsOpen)
+                using (var fs = new FileStream(this.FileInfo.FullName,
+                    FileMode.OpenOrCreate,
+                    FileAccess.Read,
+                    FileShare.ReadWrite,
+                    4096 * 4,
+                    FileOptions.SequentialScan))
+                {
+                    fs.Seek(StartPos, SeekOrigin.Begin);
+                    while (StartPos > 0)
+                    {
+                        var row = io_read_row(fs, StartPos, readValue);
+                        if (row.Key == null) yield break;
+
+                        yield return row;
+
+                        // GoTo Next
+                        StartPos = row.Key.NextPos;
+
+                        // the bytes are being skipped if next position is further than actual position.
+                        var pos = row.Key.RootPos + row.Key.RowSize;
+                        if (StartPos > pos)
+                            fs.Read(new byte[StartPos - pos]);
+                    }
+                }
         }
+        private KeyValuePair<RowHeader, byte[]> io_read_row(FileStream fs, long pos, bool readValue = false)
+        {
+            // row-header bytes are being read
+            var bytes = new byte[RowHeader.SizeWithKey];
+            var retval = fs.Read(bytes);
+            if (retval != RowHeader.SizeWithKey) return default;
+
+            // row-header is being initialized from bytes read.
+            var rh = new RowHeader();
+            rh.FromArray(bytes);
+            rh.RootPos = pos;
+
+            var skipValueSize = rh.ValueSize;
+            byte[] valueBytes = default;
+            // Value
+            if (readValue)
+            {
+                skipValueSize -= rh.ValueActualSize;
+                valueBytes = new byte[rh.ValueActualSize];
+                fs.Read(valueBytes);
+            }
+            //-- skip
+            if (skipValueSize > 0)
+                fs.Read(new byte[skipValueSize]);
+
+            return KeyValuePair.Create(rh, valueBytes);
+        }
+
         internal void io_write_row_header(RowHeader rh, bool writePrimaryKey = false)
         {
             //byte[] key_bytes = null;
@@ -396,9 +411,9 @@ namespace KeyValue
             //if (writePrimaryKey)
             //    this.cw.Write(rh.KeyStartPos, key_bytes);
 
-            this.cw.Write(rh.Pos, rh.ToArray(true));
+            this.cw.Write(rh.RootPos, rh.ToArray(true));
         }
-        internal void io_write_row_value(RowHeader rh, byte[] data, bool updateIndex = true) => this.cw.Write(rh.ValueStartPos, data);
+        internal void io_write_row_value(RowHeader rh, byte[] data, bool updateIndex = true) => this.cw.Write(rh.ValuePos, data);
         #endregion
     }
 }
