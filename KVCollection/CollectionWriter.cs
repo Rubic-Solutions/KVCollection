@@ -7,7 +7,7 @@ namespace KeyValue
 {
     internal class CollectionWriter
     {
-        public readonly bool HasLog;
+        public readonly bool UseLog;
 
         [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal int InstanceCount;
         [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal FileStream fs_inx = null;
@@ -20,17 +20,16 @@ namespace KeyValue
 
         public CollectionWriter(string Directory, string CollectionName, bool NoLog = false)
         {
-            this.HasLog = true; // !NoLog;
+            this.UseLog = true; // !NoLog;
 
             var name = System.IO.Path.Combine(Directory, CollectionName);
             fs_inx = new FileStream(name + ".inx", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
             fs_dat = new FileStream(name + ".dat", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
-            if (this.HasLog)
+            if (this.UseLog)
             {
                 fs_log = new FileStream(name + ".log", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
 
-                if (wal_deserialize())
-                    FlushToDisk(true);
+                if (wal_deserialize()) FlushToDisk(true);
             }
         }
 
@@ -44,15 +43,16 @@ namespace KeyValue
         #endregion
 
         #region "File methods"
-        public long Length => fs_inx.Length;
-        public bool IsInitial => fs_inx.Length == 0;
         public void WriteBegin(Action fn)
         {
             lock (lck)
             {
-                writingBuffers.Clear();
+                //writingBuffers.Clear();
 
-                if (wal_deserialize()) FlushToDisk(true);
+                //if (wal_deserialize()) FlushToDisk(true);
+                if (writingBuffers.Count > 0) FlushToDisk(true);
+
+
                 try
                 {
                     writingHasBegun = true;
@@ -68,7 +68,7 @@ namespace KeyValue
             }
         }
 
-        private Stopwatch sw = new Stopwatch();
+        //private Stopwatch sw = new Stopwatch();
         private void FlushToDisk(bool recovery)
         {
             if (writingBuffers.Count == 0) return;
@@ -100,7 +100,9 @@ namespace KeyValue
 
             fs_inx.Flush();
 
-            wal_clear();
+            writingBuffers.Clear();
+
+            //wal_clear();
         }
         public void Write(long pos, byte[] data, int IsValue)
         {
@@ -124,22 +126,24 @@ namespace KeyValue
         #region "log (WAL) methods"
         private void wal_serialize()
         {
-            if (this.HasLog == false) return;
+            if (this.UseLog == false) return;
             try
             {
-                var data = new List<string>();
+                var items = new List<object>();
                 foreach (var item in writingBuffers)
                 {
-                    data.Add(item.isValue.ToString());
-                    data.Add(item.position.ToString());
-                    data.Add(Convert.ToBase64String(item.data));
+                    items.Add(item.isValue);
+                    items.Add(item.position);
+                    items.Add(item.data);
                 }
-                var bytes = System.Text.Encoding.UTF8.GetBytes(string.Join(",", data));
-                var len = BitConverter.GetBytes(bytes.Length);
+                var dat = Serializer.GetBytes(items.ToArray());
+                var len = BitConverter.GetBytes((int)dat.Length);
+
                 fs_log.Position = 0;
-                fs_log.Write(len, 0, len.Length);
-                fs_log.Write(bytes, 0, bytes.Length);
+                fs_log.Write(Serializer.ConcatBytes(dat.Length + 4, len, dat));
                 fs_log.Flush();
+
+                wal_deserialize();
             }
             catch (Exception)
             {
@@ -147,10 +151,9 @@ namespace KeyValue
                 throw;
             }
         }
-
         private bool wal_deserialize()
         {
-            if (this.HasLog == false) return false;
+            if (this.UseLog == false) return false;
             if (fs_log.Length == 0) return false;
 
             fs_log.Position = 0;
@@ -163,22 +166,22 @@ namespace KeyValue
             fs_log.Read(wal_bytes, 0, wal_bytes.Length);
             int partNo = 0;
             item item = null;
-            foreach (var part in System.Text.Encoding.UTF8.GetString(wal_bytes).Split(','))
+            foreach (var part in Serializer.GetObjects(wal_bytes))
             {
                 if (partNo == 0)
                 {
                     item = new item();
-                    item.isValue = int.Parse(part);
+                    item.isValue = (int)part;
                     partNo++;
                 }
                 else if (partNo == 1)
                 {
-                    item.position = long.Parse(part);
+                    item.position = (long)part;
                     partNo++;
                 }
                 else
                 {
-                    item.data = Convert.FromBase64String(part);
+                    item.data = (byte[])part;
                     writingBuffers.Add(item);
                     partNo = 0;
                 }
@@ -189,12 +192,14 @@ namespace KeyValue
         private byte[] wal_zero = BitConverter.GetBytes(0);
         private void wal_clear()
         {
-            if (this.HasLog == false) return;
+            if (this.UseLog == false) return;
 
             fs_log.Seek(0, SeekOrigin.Begin);
             fs_log.Write(wal_zero, 0, 4);
             //wal.SetLength(0);   // it takes +2sec for 100K 
             fs_log.Flush();
+
+            writingBuffers.Clear();
         }
         #endregion
 

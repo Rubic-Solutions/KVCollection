@@ -93,13 +93,15 @@ namespace KeyValue
                 else if (t == typeof(double))
                     addBytes(10, BitConverter.GetBytes((double)item));
                 else if (t == typeof(decimal))
-                    addBytes(11, GetBytes((decimal)item));
+                    addBytes(11, getDecimalBytes((decimal)item));
                 else if (t == typeof(DateTime))
                     addBytes(12, BitConverter.GetBytes(((DateTime)item).Ticks));
+                else if (t == typeof(byte[]))
+                    addBytes(13, (byte[])item);
             }
             return retval.ToArray();
         }
-        public static IEnumerable<object> GetObjects(byte[] bytes,int start = 0, int count=-1)
+        public static IEnumerable<object> GetObjects(byte[] bytes, int start = 0, int count = -1)
         {
             var enc = System.Text.Encoding.UTF8;
             if (count == -1) count = bytes.Length;
@@ -137,6 +139,13 @@ namespace KeyValue
                     yield return getDecimalValue(bytes, pos);
                 if (typ == 12)
                     yield return new DateTime(BitConverter.ToInt64(bytes, pos));
+                if (typ == 13)
+                {
+                    var retval = new byte[len];
+                    System.Buffer.BlockCopy(bytes, pos, retval, 0, len);
+                    yield return retval;
+                    //yield return bytes new DateTime(BitConverter.ToInt64(bytes, pos));
+                }
 
                 pos += len - 1;
             }
@@ -148,7 +157,7 @@ namespace KeyValue
             List<byte> bytes = new List<byte>();
             foreach (Int32 i in bits)
                 bytes.AddRange(BitConverter.GetBytes(i));
-            
+
             return bytes.ToArray();
         }
         private static decimal getDecimalValue(byte[] bytes, int start = 0)

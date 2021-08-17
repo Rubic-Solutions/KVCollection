@@ -115,8 +115,10 @@ namespace KVExplorer
             var lastItem = kvFile.GetLast();
             result = await DoWork(() =>
                 {
-                    var item = kvFile.GetValue(lastItem.Key.Id);
-                }, "ID FIND search. (Id=" + lastItem.Key.Id + ")");
+                    var item = kvFile.Get(lastItem.Key.Id);
+                    if (item.Key is object)
+                        MessageAdd("\tKey = " + item.Key.Id);
+                }, "ID FIND search.");
 
             result = await DoWork(() =>
                 {
@@ -203,7 +205,7 @@ namespace KVExplorer
                 string data = null;
                 var result = await DoWork(() =>
                 {
-                    var row = kvFile.GetValue(EDIT_POS);
+                    var row = kvFile.GetByPos(EDIT_POS);
                     head = row.Key;
                     data = System.Text.Encoding.UTF8.GetString(row.Value);
                 }, null);
@@ -277,7 +279,7 @@ namespace KVExplorer
 
             result = await DoWork(() =>
             {
-                for (int i = 0; i < 500000; i++)
+                for (int i = 0; i < 50000; i++)
                 {
                     var item = new testModel();
                     item.Key = "Key-" + i;

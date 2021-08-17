@@ -37,12 +37,12 @@ namespace KeyValue
 
         public new KeyValuePair<RowHeader, T> GetValue(long Pos)
         {
-            var row = base.GetValue(Pos);
+            var row = base.GetByPos(Pos);
             return KeyValuePair.Create(row.Key, Serializer.GetObject<T>(row.Value));
         }
         public new KeyValuePair<RowHeader, T> GetValue(int Id)
         {
-            var row = base.GetValue(Id);
+            var row = base.Get(Id);
             return KeyValuePair.Create(row.Key, Serializer.GetObject<T>(row.Value));
         }
 

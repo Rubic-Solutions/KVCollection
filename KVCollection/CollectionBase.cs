@@ -81,8 +81,9 @@ namespace KeyValue
                 {
                     var fs = this.cw.fs_inx;
                     // file is being created newly (file-header is being initialized)
-                    if (fi_exists_inx)
+                    if (fi_exists_inx && fs.Length > 0)
                     {
+                        fs.Position = 0;
                         var bytes = new byte[FileHeader.Size];
                         if (fs.Read(bytes) != bytes.Length)
                             throw new Exception("Invalid file header.");
@@ -187,13 +188,13 @@ namespace KeyValue
                 });
 
         //public bool Exists(string PrimaryKey) => GetHeader(PrimaryKey) is object;
-        public KeyValuePair<RowHeader, byte[]> GetFirst() => GetValue(FileHeader.Size);
-        public KeyValuePair<RowHeader, byte[]> GetLast() => GetValue(this.cw.fs_inx.Length - RowHeader.Size);
+        public KeyValuePair<RowHeader, byte[]> GetFirst() => GetByPos(FileHeader.Size);
+        public KeyValuePair<RowHeader, byte[]> GetLast() => GetByPos(this.cw.fs_inx.Length - RowHeader.Size);
 
-        public KeyValuePair<RowHeader, byte[]> GetValue(long Pos) => io_read_forward(Pos, (x) => true).FirstOrDefault();
-        public KeyValuePair<RowHeader, byte[]> GetValue(int Id)
+        public KeyValuePair<RowHeader, byte[]> GetByPos(long Pos) => io_read_forward(Pos, (x) => true).FirstOrDefault();
+        public KeyValuePair<RowHeader, byte[]> Get(int Id)
         {
-            foreach (var row in io_read_forward(FileHeader.Size, (rh) => rh.Id==Id))
+            foreach (var row in io_read_forward(FileHeader.Size, (rh) => rh.Id == Id))
                 if (row.Value != null)
                     return KeyValuePair.Create(row.Key, row.Value);
             return default;
@@ -312,11 +313,8 @@ namespace KeyValue
             this.fh.Count--;
         }
 
-        private bool io_is_last(RowHeader rh) =>
-            (rh.Pos + RowHeader.Size) == this.cw.fs_inx.Length;
-        private IEnumerable<KeyValuePair<RowHeader, byte[]>> io_read_forward(
-            long StartPos,
-            Func<RowHeader, bool> readValue = null)
+        private bool io_is_last(RowHeader rh) => (rh.Pos + RowHeader.Size) == this.cw.fs_inx.Length;
+        private IEnumerable<KeyValuePair<RowHeader, byte[]>> io_read_forward(long StartPos, Func<RowHeader, bool> readValue = null)
         {
             if (IsOpen == false || StartPos < FileHeader.Size) yield break;
 
