@@ -28,7 +28,7 @@ namespace KeyValue
             this.ValueSize = BitConverter.ToInt32(data, start + 4);         // 4 bytes
             this.ValueActualSize = BitConverter.ToInt32(data, start + 8);   // 4 bytes
             this.ValuePos = BitConverter.ToInt64(data, start + 12);          // 8 bytes
-            this.IndexValues = Serializer.GetObjects(data, start + 20, SizeOfIndex).ToArray(); 
+            this.IndexValues = Serializer.GetObjects(data, start + 20, SizeOfIndex).ToArray();
             return true;
         }
         internal byte[] ToArray(bool withPrimaryKey)

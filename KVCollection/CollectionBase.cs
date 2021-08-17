@@ -131,67 +131,75 @@ namespace KeyValue
         public long Count => this.fh.Count;
 
         /// <summary>Add an item into the collection.</summary>
-        public int Add(byte[] Value, IEnumerable<object> IndexValues = default)
+        public RowHeader Add(byte[] Value, IEnumerable<object> IndexValues = default)
         {
             var index_bytes = Serializer.GetBytes(IndexValues);
             RowHeader retval = null;
             WriteBegin(() => retval = insert(Value, IndexValues));
-            return retval.Id;
-        }
-        //public int Add<K>(K Value)
-        //{
-        //    //var index_bytes = Serializer.GetBytes(IndexValues);
-        //    //RowHeader retval = null;
-        //    //WriteBegin(() => retval = insert(Value, IndexValues));
-        //    //return retval.Id;
-        //}
-
-        /// <summary>Updates the value of the [Key]. If [Key] does not exist, nothing updated.</summary>
-        public void Update(int Id, byte[] Value, IEnumerable<object> IndexValues = default)
-        {
-            var rh = GetHeader(Id);
-            if (rh == null) return;
-
-            WriteBegin(() => update(rh, Value, IndexValues));
+            return retval;
         }
 
-        /// <summary>
-        /// Sets the value of the [Key]. If [Key] does not exist, a new [Key] is created. If [Key] already exists in the collection, it is overwritten.
-        /// <para>
-        /// PrimaryKey value cannot be changed. Only can be changed other Key-Values . To clear Key-Value then set EMPTY value. To keep as is value of KEY, then leave NULL.
-        /// </para>
-        /// </summary>
-        public int Upsert(int Id, byte[] Value, IEnumerable<object> IndexValues = default)
+        /// <summary>Updates the item by the [Row-ID]. If the item does not exist, exception occured.</summary>
+        public RowHeader Update(int Id, byte[] Value, IEnumerable<object> IndexValues = default) =>
+            Update(GetHeader(Id), Value, IndexValues);
+        /// <summary>Updates the item by the [first index value]. If the item does not exist, exception occured.</summary>
+        public RowHeader Update(byte[] Value, IEnumerable<object> IndexValues = default) =>
+            Update(GetHeaderByKey(IndexValues.FirstOrDefault()), Value, IndexValues);
+        /// <summary>Updates the item by the [Row-Header]. If the item does not exist, exception occured.</summary>
+        public RowHeader Update(RowHeader rowHeader, byte[] Value, IEnumerable<object> IndexValues = default)
         {
-            var rh = GetHeader(Id);
+            if (rowHeader == null) throw new Exception("Update error. Item is not found.");
             RowHeader retval = null;
-            WriteBegin(() => retval = (rh == null) ? insert(Value, IndexValues) : update(rh, Value, IndexValues));
-            return retval.Id;
+            WriteBegin(() => retval = update(rowHeader, Value, IndexValues));
+            return retval;
         }
 
-        /// <summary>Deletes the value of the [Key]. If [Key] does not exist, nothing deleted.</summary>
-        public void Delete(int Id)
+
+        /// <summary>Sets the item by [Row-ID]. If [Row-ID] does not exist, a new item is created. If [Row-ID] already exists in the collection, it is overwritten.</summary>
+        public RowHeader Upsert(int Id, byte[] Value, IEnumerable<object> IndexValues = default) =>
+            Upsert(GetHeader(Id), Value, IndexValues);
+        /// <summary>Sets the item by [first index value]. If [first index value] does not exist, a new item is created. If [first index value] already exists in the collection, it is overwritten.</summary>
+        public RowHeader Upsert(byte[] Value, IEnumerable<object> IndexValues = default) =>
+            Upsert(GetHeaderByKey(IndexValues.FirstOrDefault()), Value, IndexValues);
+        /// <summary>Sets the item by [Row-Header]. If [Row-Header] does not exist, a new item is created. If [Row-Header] already exists in the collection, it is overwritten.</summary>
+        public RowHeader Upsert(RowHeader rowHeader, byte[] Value, IEnumerable<object> IndexValues = default)
         {
-            var rh = GetHeader(Id);
-            if (rh == null) return;
-            WriteBegin(() => delete(rh));
+            RowHeader retval = null;
+            WriteBegin(() => retval = (rowHeader == null) ? insert(Value, IndexValues) : update(rowHeader, Value, IndexValues));
+            return retval;
+        }
+
+        /// <summary>Deletes the item by the [Row-ID]. If the item does not exist, nothing deleted.</summary>
+        public void Delete(int Id) => Delete(GetHeader(Id));
+        /// <summary>Deletes the item by the [first index value]. If the item does not exist, nothing deleted.</summary>
+        public void Delete<T>(T FirstIndexValue) => Delete(GetHeaderByKey(FirstIndexValue));
+        /// <summary>Deletes the item by the [Row-Header]. If the item does not exist, nothing deleted.</summary>
+        public void Delete(RowHeader rowHeader)
+        {
+            if (rowHeader == null) return;
+            WriteBegin(() => delete(rowHeader));
         }
 
         /// <summary>All records is removed from collection, and file is shrinked.</summary>
         public void Truncate() =>
             WriteBegin(() =>
-                {
-                    this.cw.Truncate();
-                    this.fh = new FileHeader();
+            {
+                this.cw.Truncate();
+                this.fh = new FileHeader();
 
-                    hs.Clear();
-                });
+                hs.Clear();
+            });
 
         //public bool Exists(string PrimaryKey) => GetHeader(PrimaryKey) is object;
         public KeyValuePair<RowHeader, byte[]> GetFirst() => GetByPos(FileHeader.Size);
         public KeyValuePair<RowHeader, byte[]> GetLast() => GetByPos(this.cw.fs_inx.Length - RowHeader.Size);
 
+        /// <summary>retreives the item by the position of the item.</summary>
+        /// <param name="Pos">is the position of the item.</param>
         public KeyValuePair<RowHeader, byte[]> GetByPos(long Pos) => io_read_forward(Pos, (x) => true).FirstOrDefault();
+        /// <summary>retreives the item by the first IndexValue.</summary>
+        /// <param name="FirstIndexValue">is the first IndexValue to be searched.</param>
+        public KeyValuePair<RowHeader, byte[]> GetByKey(object FirstIndexValue) => FindAll(x => x[0] == FirstIndexValue).FirstOrDefault();
         public KeyValuePair<RowHeader, byte[]> Get(int Id)
         {
             foreach (var row in io_read_forward(FileHeader.Size, (rh) => rh.Id == Id))
@@ -199,11 +207,13 @@ namespace KeyValue
                     return KeyValuePair.Create(row.Key, row.Value);
             return default;
         }
+        public KeyValuePair<RowHeader, byte[]> Get(RowHeader rowHeader) => io_read_forward(rowHeader?.Pos ?? 0, (x) => true).FirstOrDefault();
 
         public RowHeader GetHeader(int Id) => GetHeaders().FirstOrDefault(row => row.Id == Id);
+        public RowHeader GetHeaderByKey(object FirstIndexValue) => FirstIndexValue == null ? null : GetHeaders().FirstOrDefault(row => row.IndexValues[0] == FirstIndexValue);
         public IEnumerable<RowHeader> GetHeaders()
         {
-            foreach (var row in io_read_forward(FileHeader.Size))
+            foreach (var row in io_read_forward(FileHeader.Size, (rh) => false))
                 yield return row.Key;
         }
 
@@ -215,14 +225,14 @@ namespace KeyValue
             foreach (var row in All())
                 yield return KeyValuePair.Create(row.Key, Serializer.GetObject<T>(row.Value));
         }
-        /// <summary>Retrieves all the elements. </summary>
+        /// <summary>Retrieves all the elements by searching on indexValues.</summary>
         public IEnumerable<KeyValuePair<RowHeader, byte[]>> FindAll(Predicate<object[]> match)
         {
             foreach (var row in io_read_forward(FileHeader.Size, (rh) => match(rh.IndexValues)))
                 if (row.Value != null)
                     yield return KeyValuePair.Create(row.Key, row.Value);
         }
-        /// <summary>Retrieves all the elements. </summary>
+        /// <summary>Retrieves all the elements by searching on indexValues.</summary>
         public IEnumerable<KeyValuePair<RowHeader, T>> FindAll<T>(Predicate<object[]> match)
         {
             foreach (var row in FindAll(match))
@@ -232,7 +242,7 @@ namespace KeyValue
 
 
         #region "private methods"
-        internal void WriteBegin(Action fn)
+        private void WriteBegin(Action fn)
         {
             this.cw?.WriteBegin((Action)(() =>
             {
@@ -242,7 +252,7 @@ namespace KeyValue
             }));
         }
 
-        internal RowHeader insert(byte[] Value, IEnumerable<object> IndexValues)
+        private RowHeader insert(byte[] Value, IEnumerable<object> IndexValues)
         {
             var rh = new RowHeader();
             { // header of new record
@@ -267,7 +277,7 @@ namespace KeyValue
 
             return rh;
         }
-        internal RowHeader update(RowHeader rh, byte[] Value, IEnumerable<object> IndexValues)
+        private RowHeader update(RowHeader rh, byte[] Value, IEnumerable<object> IndexValues)
         {
             if (rh == null) throw new Exception("Update error. RowHeader must be specifed on update.");
 
@@ -305,7 +315,7 @@ namespace KeyValue
                 return rh;
             }
         }
-        internal void delete(RowHeader rh)
+        private void delete(RowHeader rh)
         {
             if (rh == null) return;
             rh.SetDeleted();
