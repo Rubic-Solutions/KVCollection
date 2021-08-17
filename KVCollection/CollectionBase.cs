@@ -8,6 +8,8 @@ namespace KeyValue
 {
     public class CollectionBase : IDisposable
     {
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)] private string name;
+
         [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal static object lock_ctor = new object();
 
         [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal static Dictionary<string, CollectionWriter> cws = null;   // CollectionWriters
@@ -18,8 +20,6 @@ namespace KeyValue
 
         [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal static Dictionary<string, HashSet<string>> hss = null;
         [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal HashSet<string> hs = null;
-
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal System.IO.FileInfo fs_info = null;
 
         static CollectionBase()
         {
@@ -32,23 +32,42 @@ namespace KeyValue
 
 
         #region "Open/Close"
-        public System.IO.FileInfo FileInfo => this.fs_info;
-
-        public void Open(string CollectionName)
+        public string Name => name;
+        public string IndexFile => name + ".inx";
+        public string DataFile => name + ".dat";
+        public bool IsOpen => this.name != null;
+        /// <summary>
+        /// Opens the collection specified in a directory. 
+        /// </summary>
+        /// <param name="Directory">The directory path that the collection is in.</param>
+        /// <param name="CollectionName">Collection name without extension.</param>
+        public void Open(string Directory, string CollectionName)
         {
-            if (this.fs_info?.FullName == CollectionName) return;
-            if (this.fs_info is object) this.Close();
+            var name = System.IO.Path.Combine(Directory, CollectionName);
 
-            this.fs_info = new System.IO.FileInfo(CollectionName);
-            var name = this.fs_info.FullName;
-            var fi_exists = fs_info.Exists;
+            if (this.name == name) return;
+            if (this.name != null) this.Close();
+            this.name = name;
+
+            // index and data files are must be exist at same time.
+            var fi_exists_inx = System.IO.File.Exists(this.IndexFile);
+            var fi_exists_dat = System.IO.File.Exists(this.DataFile);
+
+            if (fi_exists_inx || fi_exists_dat)
+            {
+                if (fi_exists_inx == false)
+                    throw new Exception("Index file is not exists. (File=" + this.IndexFile + ")");
+
+                if (fi_exists_dat == false)
+                    throw new Exception("Data file is not exists. (File=" + this.DataFile + ")");
+            }
 
             lock (lock_ctor)
             {
                 bool is_first = false;
                 if (cws.ContainsKey(name) == false)
                 {
-                    cws.Add(name, new CollectionWriter(this.fs_info));
+                    cws.Add(name, new CollectionWriter(Directory, CollectionName));
                     fhs.Add(name, new FileHeader());
                     hss.Add(name, new HashSet<string>());
                     is_first = true;
@@ -60,11 +79,11 @@ namespace KeyValue
 
                 if (is_first)
                 {
-                    var fs = this.cw.fs;
+                    var fs = this.cw.fs_inx;
                     // file is being created newly (file-header is being initialized)
-                    if (fi_exists)
+                    if (fi_exists_inx)
                     {
-                        var bytes = new byte[this.fh.Size];
+                        var bytes = new byte[FileHeader.Size];
                         if (fs.Read(bytes) != bytes.Length)
                             throw new Exception("Invalid file header.");
 
@@ -75,14 +94,13 @@ namespace KeyValue
                         WriteBegin(null);
                     }
 
-                    var headers = GetHeaders().ToList();
-                    if (headers.Count > 0)
-                    {
-                        foreach (var rh in headers)
-                            hs.Add(rh.PrimaryKey);
+                    //var headers = GetHeaders().ToList();
+                    //if (headers.Count > 0)
+                    //{
+                    //    foreach (var rh in headers)
+                    //        hs.Add(rh.PrimaryKey);
 
-                        lastRow = headers[headers.Count - 1];
-                    }
+                    //}
                 }
             }
 
@@ -92,21 +110,17 @@ namespace KeyValue
         {
             lock (lock_ctor)
             {
-                if (this.fs_info == null) return;
-
+                if (this.name == null) return;
                 this.cw.InstanceCount--;
 
                 if (this.cw.InstanceCount == 0)
                 {
-                    var name = this.fs_info.FullName;
-
                     this.cw.Close();
-                    cws.Remove(name);
-                    fhs.Remove(name);
-                    hss.Remove(name);
+                    cws.Remove(this.name);
+                    fhs.Remove(this.name);
+                    hss.Remove(this.name);
                 }
-
-                this.fs_info = null;
+                this.name = null;
             }
         }
 
@@ -114,34 +128,30 @@ namespace KeyValue
 
         #region "Public Operation Methods"
         public long Count => this.fh.Count;
-        public bool IsOpen => this.fs_info != null;
 
         /// <summary>Add an item into the collection.</summary>
-        public void Add(string PrimaryKey, byte[] Value)
+        public int Add(byte[] Value, IEnumerable<object> IndexValues = default)
         {
-            var key_bytes = System.Text.Encoding.UTF8.GetBytes(PrimaryKey);
-            if (key_bytes.Length == 0) throw new Exception("Key length must be at least 1 character.");
-            if (Exists(PrimaryKey)) throw new Exception("Key already exists.");
-
-            RowHeader new_row = default;
-            WriteBegin(() => new_row = insert(PrimaryKey, Value));
-            // lastRow info must be set after commit.
-            lastRow = new_row;
+            var index_bytes = Serializer.GetBytes(IndexValues);
+            RowHeader retval = null;
+            WriteBegin(() => retval = insert(Value, IndexValues));
+            return retval.Id;
         }
-
-        /// <summary>Add an item into the collection.</summary>
-        public void Add(KeyValuePair<string, byte[]> Item) => Add(Item.Key, Item.Value);
+        //public int Add<K>(K Value)
+        //{
+        //    //var index_bytes = Serializer.GetBytes(IndexValues);
+        //    //RowHeader retval = null;
+        //    //WriteBegin(() => retval = insert(Value, IndexValues));
+        //    //return retval.Id;
+        //}
 
         /// <summary>Updates the value of the [Key]. If [Key] does not exist, nothing updated.</summary>
-        public void Update(string PrimaryKey, byte[] Value)
+        public void Update(int Id, byte[] Value, IEnumerable<object> IndexValues = default)
         {
-            var rh = GetHeader(PrimaryKey);
+            var rh = GetHeader(Id);
             if (rh == null) return;
 
-            RowHeader new_row = default;
-            WriteBegin(() => new_row = update(rh, Value));
-            // lastRow info must be set after commit.
-            lastRow = new_row;
+            WriteBegin(() => update(rh, Value, IndexValues));
         }
 
         /// <summary>
@@ -150,23 +160,20 @@ namespace KeyValue
         /// PrimaryKey value cannot be changed. Only can be changed other Key-Values . To clear Key-Value then set EMPTY value. To keep as is value of KEY, then leave NULL.
         /// </para>
         /// </summary>
-        public void Upsert(string PrimaryKey, byte[] Value)
+        public int Upsert(int Id, byte[] Value, IEnumerable<object> IndexValues = default)
         {
-            var rh = GetHeader(PrimaryKey);
-            RowHeader new_row = default;
-            WriteBegin(() => new_row = (rh == null) ? insert(PrimaryKey, Value) : update(rh, Value));
-            // lastRow info must be set after commit.
-            lastRow = new_row;
+            var rh = GetHeader(Id);
+            RowHeader retval = null;
+            WriteBegin(() => retval = (rh == null) ? insert(Value, IndexValues) : update(rh, Value, IndexValues));
+            return retval.Id;
         }
 
         /// <summary>Deletes the value of the [Key]. If [Key] does not exist, nothing deleted.</summary>
-        public void Delete(string PrimaryKey)
+        public void Delete(int Id)
         {
-            var rh = GetHeader(PrimaryKey);
+            var rh = GetHeader(Id);
             if (rh == null) return;
             WriteBegin(() => delete(rh));
-            // lastRow info must be set after commit.
-            if (rh.RootPos == lastRow.RootPos) lastRow = GetLast().Key;
         }
 
         /// <summary>All records is removed from collection, and file is shrinked.</summary>
@@ -177,111 +184,98 @@ namespace KeyValue
                     this.fh = new FileHeader();
 
                     hs.Clear();
-                    lastRow = null;
-
                 });
 
-        public bool Exists(string PrimaryKey) => hs.Contains(PrimaryKey);
-        public KeyValuePair<RowHeader, byte[]> GetFirst() => GetValue(this.fh.FirstRecStartPos);
-        public KeyValuePair<RowHeader, byte[]> GetLast() => GetValue(this.fh.LastRecStartPos);
-        public KeyValuePair<RowHeader, byte[]> GetValue(long Pos)
-        {
-            foreach (var row in io_read_rows(Pos, true))
-                return row;
+        //public bool Exists(string PrimaryKey) => GetHeader(PrimaryKey) is object;
+        public KeyValuePair<RowHeader, byte[]> GetFirst() => GetValue(FileHeader.Size);
+        public KeyValuePair<RowHeader, byte[]> GetLast() => GetValue(this.cw.fs_inx.Length - RowHeader.Size);
 
-            return default;
-        }
-        public KeyValuePair<RowHeader, byte[]> GetValue(string PrimaryKey)
+        public KeyValuePair<RowHeader, byte[]> GetValue(long Pos) => io_read_forward(Pos, (x) => true).FirstOrDefault();
+        public KeyValuePair<RowHeader, byte[]> GetValue(int Id)
         {
-            foreach (var row in All())
-                if (row.Key.PrimaryKey == PrimaryKey)
-                    return row;
-
+            foreach (var row in io_read_forward(FileHeader.Size, (rh) => rh.Id==Id))
+                if (row.Value != null)
+                    return KeyValuePair.Create(row.Key, row.Value);
             return default;
         }
 
-        public RowHeader GetHeader(string PrimaryKey)
-        {
-            foreach (var rh in GetHeaders())
-                if (rh.PrimaryKey == PrimaryKey)
-                    return rh;
-
-            return default;
-        }
-
+        public RowHeader GetHeader(int Id) => GetHeaders().FirstOrDefault(row => row.Id == Id);
         public IEnumerable<RowHeader> GetHeaders()
         {
-            foreach (var row in io_read_rows(this.fh.FirstRecStartPos, false))
+            foreach (var row in io_read_forward(FileHeader.Size))
                 yield return row.Key;
         }
 
         /// <summary>Retrieves all the elements. </summary>
-        public IEnumerable<KeyValuePair<RowHeader, byte[]>> All() => io_read_rows(this.fh.FirstRecStartPos, true);
+        public IEnumerable<KeyValuePair<RowHeader, byte[]>> All() => io_read_forward(FileHeader.Size, (x) => true);
         /// <summary>Retrieves all the elements. </summary>
         public IEnumerable<KeyValuePair<RowHeader, T>> All<T>()
         {
             foreach (var row in All())
                 yield return KeyValuePair.Create(row.Key, Serializer.GetObject<T>(row.Value));
         }
+        /// <summary>Retrieves all the elements. </summary>
+        public IEnumerable<KeyValuePair<RowHeader, byte[]>> FindAll(Predicate<object[]> match)
+        {
+            foreach (var row in io_read_forward(FileHeader.Size, (rh) => match(rh.IndexValues)))
+                if (row.Value != null)
+                    yield return KeyValuePair.Create(row.Key, row.Value);
+        }
+        /// <summary>Retrieves all the elements. </summary>
+        public IEnumerable<KeyValuePair<RowHeader, T>> FindAll<T>(Predicate<object[]> match)
+        {
+            foreach (var row in FindAll(match))
+                yield return KeyValuePair.Create(row.Key, Serializer.GetObject<T>(row.Value));
+        }
         #endregion
 
 
         #region "private methods"
-        private static RowHeader lastRow = null;
         internal void WriteBegin(Action fn)
         {
             this.cw?.WriteBegin((Action)(() =>
             {
                 fn?.Invoke();
                 // file header is being updated...
-                this.cw.Write(this.fh.Pos, this.fh.ToArray());
+                this.cw.Write(this.fh.Pos, this.fh.ToArray(), 0);
             }));
         }
-        internal RowHeader insert(string PrimaryKey, byte[] Value)
-        {
-            var newPos = this.fh.FirstRecStartPos;
-            // [NextPos] value of the [LastRecord] will be update; If any record has exists
-            if (this.fh.Count > 0)
-            {
-                if (lastRow is object)
-                {
-                    newPos = lastRow.RootPos + lastRow.RowSize;
-                    lastRow.NextPos = newPos;
-                    io_write_row_header(lastRow);
-                }
-            }
 
+        internal RowHeader insert(byte[] Value, IEnumerable<object> IndexValues)
+        {
             var rh = new RowHeader();
             { // header of new record
-                rh.RootPos = newPos;
-                rh.PrevPos = this.fh.Count > 0 ? this.fh.LastRecStartPos : 0;
+                rh.Id = this.fh.LastId + 1;
+                rh.Pos = this.cw.fs_inx.Length;
+                rh.ValuePos = this.cw.fs_dat.Length;
+
                 rh.ValueSize = Value.Length;
                 rh.ValueActualSize = Value.Length;
-                rh.PrimaryKey = PrimaryKey;
+                rh.IndexValues = IndexValues.ToArray();
             }
 
             { // header of the file is being updated
-                this.fh.LastRecStartPos = rh.RootPos;   // last position is new record-position
+                this.fh.LastId = rh.Id;
                 this.fh.Count++;
             }
 
             { // record is being written
-                io_write_row_header(rh, true);
+                io_write_row_header(rh);
                 io_write_row_value(rh, Value);
             }
 
             return rh;
         }
-        internal RowHeader update(RowHeader rh, byte[] Value)
+        internal RowHeader update(RowHeader rh, byte[] Value, IEnumerable<object> IndexValues)
         {
             if (rh == null) throw new Exception("Update error. RowHeader must be specifed on update.");
 
             // if there is a next record and also new value is longer than old value,
             // then delete old record and insert as new.
-            if (Value.Length > rh.ValueActualSize && rh.NextPos != 0)
+            if ((Value.Length > rh.ValueActualSize) && io_is_last(rh) == false)
             {
                 delete(rh);
-                return insert(rh.PrimaryKey, Value);
+                return insert(Value, IndexValues);
             }
             else
             {
@@ -302,8 +296,9 @@ namespace KeyValue
                 */
 
                 rh.ValueActualSize = Value.Length;
+                rh.IndexValues = IndexValues.ToArray();
                 { // record is being written
-                    io_write_row_header(rh, true);
+                    io_write_row_header(rh);
                     io_write_row_value(rh, Value);
                 }
                 return rh;
@@ -312,108 +307,105 @@ namespace KeyValue
         internal void delete(RowHeader rh)
         {
             if (rh == null) return;
-
-            // is there previous record ?
-            if (rh.PrevPos != 0)
-            {
-                this.cw.fs.Seek(rh.PrevPos, SeekOrigin.Begin);
-                var prev_row_header = io_read_row(this.cw.fs, rh.PrevPos, false).Key;
-                prev_row_header.NextPos = rh.NextPos;
-                io_write_row_header(prev_row_header);
-            }
-            else
-            { // there is no previous record.
-                this.fh.FirstRecStartPos = rh.NextPos;
-            }
-
-            // is there next record ?
-            if (rh.NextPos != 0)
-            {
-                this.cw.fs.Seek(rh.NextPos, SeekOrigin.Begin);
-                var next_row_header = io_read_row(this.cw.fs, rh.NextPos, false).Key;
-                next_row_header.PrevPos = rh.PrevPos;
-                io_write_row_header(next_row_header);
-            }
-            else
-            { // there is no next record.
-                this.fh.LastRecStartPos = rh.PrevPos;
-            }
-
+            rh.SetDeleted();
+            io_write_row_header(rh);
             this.fh.Count--;
         }
 
-        private IEnumerable<KeyValuePair<RowHeader, byte[]>> io_read_rows(long StartPos, bool readValue)
+        private bool io_is_last(RowHeader rh) =>
+            (rh.Pos + RowHeader.Size) == this.cw.fs_inx.Length;
+        private IEnumerable<KeyValuePair<RowHeader, byte[]>> io_read_forward(
+            long StartPos,
+            Func<RowHeader, bool> readValue = null)
         {
-            if (IsOpen)
-                using (var fs = new FileStream(this.FileInfo.FullName,
-                    FileMode.OpenOrCreate,
-                    FileAccess.Read,
-                    FileShare.ReadWrite,
-                    4096 * 4,
-                    FileOptions.SequentialScan))
-                {
-                    fs.Seek(StartPos, SeekOrigin.Begin);
-                    while (StartPos > 0)
-                    {
-                        var row = io_read_row(fs, StartPos, readValue);
-                        if (row.Key == null) yield break;
+            if (IsOpen == false || StartPos < FileHeader.Size) yield break;
 
-                        yield return row;
+            FileStream new_fs(string nam) =>
+                new FileStream(nam, FileMode.OpenOrCreate,
+                FileAccess.Read, FileShare.ReadWrite,
+                4096 * 4, FileOptions.SequentialScan);
 
-                        // GoTo Next
-                        StartPos = row.Key.NextPos;
-
-                        // the bytes are being skipped if next position is further than actual position.
-                        var pos = row.Key.RootPos + row.Key.RowSize;
-                        if (StartPos > pos)
-                            fs.Read(new byte[StartPos - pos]);
-                    }
-                }
-        }
-        private KeyValuePair<RowHeader, byte[]> io_read_row(FileStream fs, long pos, bool readValue = false)
-        {
-            // row-header bytes are being read
-            var bytes = new byte[RowHeader.SizeWithKey];
-            var retval = fs.Read(bytes);
-            if (retval != RowHeader.SizeWithKey) return default;
-
-            // row-header is being initialized from bytes read.
-            var rh = new RowHeader();
-            rh.FromArray(bytes);
-            rh.RootPos = pos;
-
-            var skipValueSize = rh.ValueSize;
-            byte[] valueBytes = default;
-            // Value
-            if (readValue)
+            using (var fs_inx = new_fs(this.IndexFile))
+            using (var fs_dat = new_fs(this.DataFile))
             {
-                skipValueSize -= rh.ValueActualSize;
-                valueBytes = new byte[rh.ValueActualSize];
-                fs.Read(valueBytes);
+                int rowCount = (int)((fs_inx.Length - StartPos) / RowHeader.Size);
+                if (rowCount < 1) yield break;
+
+                fs_inx.Seek(StartPos, SeekOrigin.Begin);
+                //bool valuePosNotSet = true;
+                for (int i = 0; i < rowCount; i++)
+                {
+                    // row-header bytes are being read
+                    var bytes = new byte[RowHeader.Size];
+                    var retval = fs_inx.Read(bytes);
+                    if (retval != RowHeader.Size) yield break;
+
+                    // row-header is being initialized from bytes read.
+                    var rh = new RowHeader();
+                    rh.FromArray(bytes, 0);
+
+                    if (rh.Id == 0) continue; // is deleted.
+                    rh.Pos = StartPos;
+
+                    // Value
+                    byte[] valueBytes = null;
+                    if (readValue != null && readValue(rh))
+                    {
+                        //if (valuePosNotSet)
+                        if (fs_dat.Position != rh.ValuePos)
+                        {
+                            fs_dat.Position = rh.ValuePos;
+                            //valuePosNotSet = false;
+                        }
+
+                        valueBytes = new byte[rh.ValueActualSize];
+                        fs_dat.Read(valueBytes);
+                    }
+
+                    yield return KeyValuePair.Create(rh, valueBytes);
+
+
+                    StartPos += RowHeader.Size;
+                }
             }
-            //-- skip
-            if (skipValueSize > 0)
-                fs.Read(new byte[skipValueSize]);
-
-            return KeyValuePair.Create(rh, valueBytes);
         }
+        //private IEnumerable<RowHeader> io_read_backward(long StartPos = -1, bool readValue = false)
+        //{
+        //    if (this.fh.Count == 0) yield break;
+        //    if (StartPos == -1) StartPos = this.cw.fs_inx.Length;
+        //    if (StartPos <= FileHeader.Size) yield break;
 
-        internal void io_write_row_header(RowHeader rh, bool writePrimaryKey = false)
-        {
-            //byte[] key_bytes = null;
-            //if (writePrimaryKey)
-            //{
-            //    key_bytes = System.Text.Encoding.UTF8.GetBytes(rh.PrimaryKey);
-            //    rh.KeyActualLength = (short)key_bytes.Length;
-            //}
-            //this.cw.Write(rh.Pos, rh.ToArray());
+        //    int rowCount = (int)((StartPos - FileHeader.Size) / RowHeader.Size);
+        //    if (rowCount < 1) yield break;
 
-            //if (writePrimaryKey)
-            //    this.cw.Write(rh.KeyStartPos, key_bytes);
+        //    var bufferRow = Math.Min(10, rowCount);
+        //    while (bufferRow > 0)
+        //    {
+        //        var bufferLen = RowHeader.Size * bufferRow;
 
-            this.cw.Write(rh.RootPos, rh.ToArray(true));
-        }
-        internal void io_write_row_value(RowHeader rh, byte[] data, bool updateIndex = true) => this.cw.Write(rh.ValuePos, data);
+        //        this.cw.fs_inx.Position = StartPos - bufferLen;
+
+        //        var bytes = new byte[bufferLen];
+        //        this.cw.fs_inx.Read(bytes);
+
+        //        for (int i = bufferRow; i > 0; i--)
+        //        {
+        //            var bytePos = (bufferRow - 1) * RowHeader.Size;
+        //            if (bytes[bytePos] == 0) continue;  // is deleted
+
+        //            var retval = new RowHeader();
+        //            retval.FromArray(bytes, bytePos);
+        //            yield return retval;
+        //        }
+        //        rowCount -= bufferRow;
+        //    }
+        //}
+
+        internal void io_write_row_header(RowHeader rh) =>
+            this.cw.Write(rh.Pos, rh.ToArray(true), 0);
+
+        internal void io_write_row_value(RowHeader rh, byte[] data) =>
+            this.cw.Write(rh.ValuePos, data, 1);
         #endregion
     }
 }

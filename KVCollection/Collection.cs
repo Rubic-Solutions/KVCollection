@@ -4,12 +4,17 @@ namespace KeyValue
 {
     public class Collection<T> : CollectionBase
     {
+        private IndexerInfo inx_info; 
+        public Collection()
+        {
+            inx_info = CollectionIndexer.Get<T>();
+        }
         #region "Public Operation Methods"
         /// <summary>Add an item into the collection.</summary>
-        public void Add(string PrimaryKey, T Value) => base.Add(PrimaryKey, Serializer.GetBytes(Value));
+        public void Add(T Value) => base.Add( Serializer.GetBytes(Value), inx_info.CreateValues(Value));
 
         /// <summary>Updates the value of the [Key]. If [Key] does not exist, nothing updated.</summary>
-        public void Update(string PrimaryKey, T Value) => base.Update(PrimaryKey, Serializer.GetBytes(Value));
+        public void Update(int Id, T Value) => base.Update(Id, Serializer.GetBytes(Value), inx_info.CreateValues(Value));
 
         /// <summary>
         /// Sets the value of the [Key]. If [Key] does not exist, a new [Key] is created. If [Key] already exists in the collection, it is overwritten.
@@ -17,7 +22,7 @@ namespace KeyValue
         /// PrimaryKey value cannot be changed. Only can be changed other Key-Values . To clear Key-Value then set EMPTY value. To keep as is value of KEY, then leave NULL.
         /// </para>
         /// </summary>
-        public void Upsert(string PrimaryKey, T Value) => base.Upsert(PrimaryKey, Serializer.GetBytes(Value));
+        public void Upsert(int Id, T Value) => base.Upsert(Id, Serializer.GetBytes(Value), inx_info.CreateValues(Value));
 
         public new KeyValuePair<RowHeader, T> GetFirst()
         {
@@ -35,9 +40,9 @@ namespace KeyValue
             var row = base.GetValue(Pos);
             return KeyValuePair.Create(row.Key, Serializer.GetObject<T>(row.Value));
         }
-        public new KeyValuePair<RowHeader, T> GetValue(string PrimaryKey)
+        public new KeyValuePair<RowHeader, T> GetValue(int Id)
         {
-            var row = base.GetValue(PrimaryKey);
+            var row = base.GetValue(Id);
             return KeyValuePair.Create(row.Key, Serializer.GetObject<T>(row.Value));
         }
 

@@ -25,6 +25,11 @@ namespace KVExplorer
         {
             InitializeComponent();
 
+            KeyValue.CollectionIndexer.Define<testModel>()
+                .EnsureIndex(x => x.Key)
+                .EnsureIndex(x => x.IsAdult)
+                .EnsureIndex(x => x.BirtDate);
+
             DGRID_LIST.Columns.Clear();
             DGRID_LIST_SOURCE.Columns.Add("POS", typeof(long));
             DGRID_LIST_SOURCE.Columns.Add("KEYS", typeof(string));
@@ -53,7 +58,11 @@ namespace KVExplorer
             this.Text = "KV Explorer - " + fullFileName;
             var result = await DoWork(() =>
             {
-                kvFile.Open(fullFileName);  // => bu method OPEN ve COUNT vs interface de olmalı. 
+                var fi = new System.IO.FileInfo(fullFileName);
+                var dir = fi.DirectoryName;
+                var nam = fi.Extension.Length > 0 ? fi.Name.Replace(fi.Extension, "") : fi.Name;
+
+                kvFile.Open(dir, nam);  // => bu method OPEN ve COUNT vs interface de olmalı. 
                 SetItem(-1);
                 BTN_CLOSE.Visible = true;
                 BTN_OPEN.Visible = false;
@@ -68,18 +77,26 @@ namespace KVExplorer
             DGRID_LIST_SOURCE.Clear();
             SetItem(-1);
 
+            var items = new List<KeyValue.RowHeader>();
             var result = await DoWork(() =>
             {
                 if (kvFile.Count == 0) return;
-
-                DGRID_LIST_SOURCE.BeginLoadData();
                 foreach (var item in kvFile.GetHeaders())
-                {
-                    //var pkey = item.GetPrimaryKey;
-                    DGRID_LIST_SOURCE.Rows.Add(item.RootPos, item.PrimaryKey);
-                }
+                    items.Add(item);
+
+            }, "Keys are being loaded.");
+            MessageAdd("\tCount = " + items.Count);
+            if (result.Success == false) return false;
+
+            result = await DoWork(() =>
+            {
+                if (items.Count == 0) return;
+                DGRID_LIST_SOURCE.BeginLoadData();
+                foreach (var item in items)
+                    DGRID_LIST_SOURCE.Rows.Add(item.Pos, item.Id);
+
                 DGRID_LIST_SOURCE.EndLoadData();
-            }, "Keys are being listed.");
+            }, "DataView is being filled-up.");
             MessageAdd("\tCount = " + DGRID_LIST_SOURCE.Rows.Count);
             if (result.Success == false) return false;
 
@@ -87,12 +104,19 @@ namespace KVExplorer
             var dt = DateTime.Now.AddYears(-30);
             result = await DoWork(() =>
                 {
-                    adult_count = (from x
-                                  in kvFile.All<testModel>()
-                                   where x.Value.IsAdult && x.Value.BirtDate > dt
-                                   select x).Count();
-                }, "LINQ search.");
+                    foreach (var item in kvFile.FindAll(x => (bool)x[1] && (DateTime)x[2] > dt))
+                    {
+                        var i = item;
+                        adult_count++;
+                    }
+                }, "FindAll predicate search.");
             MessageAdd("\tTotal " + adult_count + " adult(s) found.");
+
+            var lastItem = kvFile.GetLast();
+            result = await DoWork(() =>
+                {
+                    var item = kvFile.GetValue(lastItem.Key.Id);
+                }, "ID FIND search. (Id=" + lastItem.Key.Id + ")");
 
             result = await DoWork(() =>
                 {
@@ -101,7 +125,7 @@ namespace KVExplorer
                         item = kvFile.GetFirst();
 
                     if (item.Key is object)
-                        MessageAdd("\tKey = " + item.Key.PrimaryKey);
+                        MessageAdd("\tKey = " + item.Key.Id);
                 }, "Get First Record 100 times.");
 
             result = await DoWork(() =>
@@ -111,7 +135,7 @@ namespace KVExplorer
                         item = kvFile.GetLast();
 
                     if (item.Key is object)
-                        MessageAdd("\tKey = " + item.Key.PrimaryKey);
+                        MessageAdd("\tKey = " + item.Key.Id);
                 }, "Get Last Record 100 times.");
 
             return result.Success;
@@ -183,15 +207,15 @@ namespace KVExplorer
                     head = row.Key;
                     data = System.Text.Encoding.UTF8.GetString(row.Value);
                 }, null);
-                EDIT_KEY.Text = head.PrimaryKey;
+                EDIT_KEY.Text = string.Join(", ",  head.IndexValues );
                 EDIT_VALUE.Text = data;
 
                 var txt = new List<string>();
-                txt.Add("Primary Key");
-                txt.Add("    " + head.PrimaryKey);
+                txt.Add("Id");
+                txt.Add("    " + head.Id);
                 txt.Add("");
                 txt.Add("Pos (pointer)");
-                txt.Add("    " + head.RootPos);
+                txt.Add("    " + head.Pos);
                 txt.Add("");
                 txt.Add("Value Length (Size on disk)");
                 txt.Add("    " + head.ValueActualSize + " (" + head.ValueSize + ") byte(s)");
@@ -213,17 +237,17 @@ namespace KVExplorer
         {
             var result = await DoWork(() =>
             {
-                if (EDIT_IS_NEW)
-                    kvFile.Add(EDIT_KEY.Text, KeyValue.Serializer.GetBytes(EDIT_VALUE.Text));
-                else
-                    kvFile.Update(EDIT_KEY.Text, KeyValue.Serializer.GetBytes(EDIT_VALUE.Text));
+                //if (EDIT_IS_NEW)
+                //    kvFile.Add(EDIT_KEY.Text, KeyValue.Serializer.GetBytes(EDIT_VALUE.Text));
+                //else
+                //    kvFile.Update(EDIT_KEY.Text, KeyValue.Serializer.GetBytes(EDIT_VALUE.Text));
             }, "Item has been saved.");
         }
         private async void BTN_DEL_Click(object sender, EventArgs e)
         {
             var result = await DoWork(() =>
             {
-                kvFile.Delete(EDIT_KEY.Text);
+                //kvFile.Delete(EDIT_KEY.Text);
             }, "Item has been deleted.");
         }
         #endregion
@@ -236,52 +260,51 @@ namespace KVExplorer
             if (DIALOG_SAVE.ShowDialog() != DialogResult.OK ||
                 string.IsNullOrEmpty(DIALOG_SAVE.FileName)) return;
 
+            var fi = new System.IO.FileInfo(DIALOG_SAVE.FileName);
+            var dir = fi.DirectoryName;
+            var nam = fi.Extension.Length > 0 ? fi.Name.Replace(fi.Extension, "") : fi.Name;
 
-            //var kvFile2 = new KeyValue.CollectionBase();
-            //kvFile2.Open(DIALOG_SAVE.FileName, dontLoad:true);
-
-            //var kvFile3 = new KeyValue.CollectionBase();
-            //kvFile3.Open(DIALOG_SAVE.FileName, dontLoad:true);
-
-            kvFile = new KeyValue.CollectionBase();
-            kvFile.Open(DIALOG_SAVE.FileName);
-
+            var kvFileTyped = new KeyValue.Collection<testModel>();
+            kvFileTyped.Open(dir, nam);
             DoWorkResult result = null;
 
             result = await DoWork(() =>
              {
-                 kvFile.Truncate();
+                 kvFileTyped.Truncate();
              }, "File is being truncated.");
             if (result.Success == false) return;
 
 
             result = await DoWork(() =>
             {
-                for (int i = 0; i < 50000; i++)
+                for (int i = 0; i < 500000; i++)
                 {
                     var item = new testModel();
-                    item.Name = "Person " + i;
+                    item.Key = "Key-" + i;
                     item.Age = ((i % 90) + 1) + 10;
                     item.BirtDate = new DateTime(DateTime.Now.Year - item.Age, (i % 12) + 1, 1);
                     item.IsAdult = item.Age > 18;
+                    item.MailBody = "".PadRight(5000, 'X');
 
-                    kvFile.Add("Key-" + i, KeyValue.Serializer.GetBytes(item));
+                    //kvFileTyped.Add(KeyValue.Serializer.GetBytes(item));
+                    kvFileTyped.Add(item);
                 }
             }, "Sample records are being generated.");
 
             if (result.Success == false) return;
 
-            kvFile.Close();
+            kvFileTyped.Close();
 
             await file_set(DIALOG_SAVE.FileName);
         }
 
         private class testModel
         {
-            public string Name;
+            public string Key;
             public int Age;
             public DateTime BirtDate;
             public bool IsAdult;
+            public string MailBody;
 
             [JsonIgnore()]
             public bool IsAdult2;

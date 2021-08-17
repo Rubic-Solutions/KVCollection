@@ -5,32 +5,25 @@ namespace KeyValue
 {
     internal class FileHeader
     {
-        internal string Prefix => "KV";
-        internal int Version => 2210729;
         internal long Pos => 0;
-        internal long Count;
-        internal long FirstRecStartPos;
-        internal long LastRecStartPos;
-        internal int Size => 2 + 4 + 8 + 8 + 8;
+        internal string Prefix => "KV";     // 2 byte
+        internal int Version => 2210729;    // 4 byte
+        internal long Count;                // 8 byte
+        internal int LastId;                // 4 byte
+        internal const int Size = 2 + 4 + 8 + 4;
 
-        public FileHeader()
-        {
-            this.FirstRecStartPos = Size;
-            this.LastRecStartPos = Size;
-        }
         internal byte[] ToArray() =>
-            Serializer.ConcatBytes(this.Size,
-                                System.Text.Encoding.ASCII.GetBytes(Prefix),
-                                BitConverter.GetBytes(Version),
-                                BitConverter.GetBytes(FirstRecStartPos),
-                                BitConverter.GetBytes(LastRecStartPos),
-                                BitConverter.GetBytes(Count));
+            Serializer.ConcatBytes(Size,
+                System.Text.Encoding.ASCII.GetBytes(Prefix),
+                BitConverter.GetBytes(Version),
+                BitConverter.GetBytes(Count),
+                BitConverter.GetBytes(LastId));
 
         /// POS=0  ->   Len=30  
         /// 
-        /// Pfx     Vers(4)     FirstRecStartPos(8)   LastRecStartPos(8)   Count(8)
-        /// -----   ---------   -------------------   ------------------   ---------
-        /// 00 01   02 ... 05   06 ... 13             14 ... 21            22 ... 29
+        /// Pfx     Vers(4)     Count(8)    LastId(4)
+        /// -----   ---------   ---------   ---------
+        /// 00 01   02 ... 05   06 ... 13   14 ... 17
 
         internal bool FromArray(byte[] data)
         {
@@ -44,9 +37,8 @@ namespace KeyValue
                 version != Version) return false;
 
             // ...
-            this.FirstRecStartPos = BitConverter.ToInt64(data, 6);
-            this.LastRecStartPos = BitConverter.ToInt64(data, 14);
-            this.Count = BitConverter.ToInt64(data, 22);
+            this.Count = BitConverter.ToInt64(data, 6);
+            this.LastId = BitConverter.ToInt32(data, 14);
             return true;
         }
     }
