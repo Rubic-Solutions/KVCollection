@@ -37,7 +37,7 @@ namespace KeyValue
             int p = 0;
             foreach (var data in datas)
             {
-                System.Array.Copy(data, 0, retval, p, data.Length);
+                Buffer.BlockCopy(data, 0, retval, p, data.Length);
                 p += data.Length;
             }
             return retval;

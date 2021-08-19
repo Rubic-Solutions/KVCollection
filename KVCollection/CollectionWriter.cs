@@ -47,12 +47,7 @@ namespace KeyValue
         {
             lock (lck)
             {
-                //writingBuffers.Clear();
-
-                //if (wal_deserialize()) FlushToDisk(true);
                 if (writingBuffers.Count > 0) FlushToDisk(true);
-
-
                 try
                 {
                     writingHasBegun = true;

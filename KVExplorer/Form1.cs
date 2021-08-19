@@ -104,7 +104,7 @@ namespace KVExplorer
             var dt = DateTime.Now.AddYears(-30);
             result = await DoWork(() =>
                 {
-                    foreach (var item in kvFile.FindAll(x => (bool)x[1] && (DateTime)x[2] > dt))
+                    foreach (var item in kvFile.FindByIndexValues(x => (bool)x[1] && (DateTime)x[2] > dt))
                     {
                         var i = item;
                         adult_count++;
@@ -266,7 +266,7 @@ namespace KVExplorer
             var dir = fi.DirectoryName;
             var nam = fi.Extension.Length > 0 ? fi.Name.Replace(fi.Extension, "") : fi.Name;
 
-            var kvFileTyped = new KeyValue.Collection<testModel>();
+            var kvFileTyped = new KeyValue.CollectionBase();
             kvFileTyped.Open(dir, nam);
             DoWorkResult result = null;
 

@@ -46,33 +46,37 @@ namespace Test
             static void fn(int number)
             {
                 var sw = new Stopwatch();
-                using (var kc = new KeyValue.Collection<testModel>())
+                KeyValue.CollectionIndexer.Define<testModel>()
+                    .EnsureIndex(x => x.Id)
+                    .EnsureIndex(x => x.IsAdult)
+                    .EnsureIndex(x => x.BirtDate);
+
+                using (var kc = new KeyValue.CollectionBase())
                 {
                     sw.Restart();
-                    kc.Open("test");
+                    kc.Open("\\", "test");
                     sw.Stop();
-                    Console.WriteLine("TH" + number  + " :: File is opened. (" + sw.Elapsed.ToString() + ")");
+                    Console.WriteLine("TH" + number + " :: File is opened. (" + sw.Elapsed.ToString() + ")");
 
                     sw.Restart();
                     for (int i = 0; i < 50000; i++)
                     {
                         var item = new testModel();
+                        item.Id = "TH" + number + "-" + i;
                         item.Name = "Person " + i;
                         item.Age = ((i % 90) + 1) + 10;
                         item.BirtDate = new DateTime(DateTime.Now.Year - item.Age, (i % 12) + 1, 1);
                         item.IsAdult = item.Age > 18;
 
-                        kc.Add("task-" + number + "-key-" + i, item);
+                        kc.Add(item);
                         //Task.Delay(100).GetAwaiter().GetResult();
                     }
                     sw.Stop();
-                    Console.WriteLine("TH" + number + " :: " + kc.Count + " items has been inserted. (" + sw.Elapsed.ToString() + ")");
+                    Console.WriteLine("TH" + number + " :: " + kc.Count.ToString() + " items has been inserted. (" + sw.Elapsed.ToString() + ")");
 
                     sw.Restart();
                     var dt = DateTime.Now.AddYears(-30);
-                    var adult_count = (from x in kc.All()
-                                       where x.Value.IsAdult && x.Value.BirtDate > dt
-                                       select x).Count();
+                    var adult_count = kc.FindByIndexValues(x => (bool)x[1] && (DateTime)x[2] > dt).Count();
                     sw.Stop();
                     Console.WriteLine("TH" + number + " :: Total " + adult_count + " adult(s) found. (" + sw.Elapsed.ToString() + ")");
 
@@ -97,7 +101,7 @@ namespace Test
 
             using (var kc = new KeyValue.CollectionBase())
             {
-                kc.Open("test");
+                kc.Open("\\", "test");
                 kc.Truncate();
             }
 
@@ -112,6 +116,7 @@ namespace Test
 
         private class testModel
         {
+            public string Id;
             public string Name;
             public int Age;
             public DateTime BirtDate;

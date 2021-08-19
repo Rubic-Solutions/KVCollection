@@ -16,7 +16,7 @@ namespace KeyValue
         public int ValueSize;
         public object[] IndexValues;
 
-        internal const int Size = 128;
+        internal const int Size = 255;
         internal const int SizeOfIndex = Size - (4 + 4 + 4 + 8);
 
         internal void SetDeleted() => this.Id = 0;
@@ -33,12 +33,14 @@ namespace KeyValue
         }
         internal byte[] ToArray(bool withPrimaryKey)
         {
+            var key_bytes = Serializer.GetBytes(IndexValues);
+            if (key_bytes.Length > SizeOfIndex) throw new Exception("Index values length can be max " + SizeOfIndex + " byte(s).");
             var retval = Serializer.ConcatBytes(Size,
                                                 BitConverter.GetBytes(Id),                  // 4 bytes
                                                 BitConverter.GetBytes(ValueSize),           // 4 bytes
                                                 BitConverter.GetBytes(ValueActualSize),     // 4 bytes
                                                 BitConverter.GetBytes(ValuePos),            // 8 bytes
-                                                Serializer.GetBytes(IndexValues));
+                                                key_bytes);
             return retval;
         }
 
