@@ -486,38 +486,36 @@ namespace KeyValue
             RowHeader retval = null;
             var mc = new multi_crud();
             fn(mc);
+            if (mc.Items.Count == 0) return retval;
 
-            // operates first ADD items.
+            // operates first [ADD] items.
             foreach (var item in mc.Items)
                 if (item.IsAdd)
                 {
                     WriteBegin(() => retval = insert(item.Value, item.IndexValues));
                     item.IsExec = true;
                 }
+            if (mc.HasExecutable == false) return retval;
 
-            // operates UPDATE / UPSERT / DELETE items.
-            if (mc.HasExecutable)
-                foreach (var row in io_read_forward(FileHeader.Size, (rh) => false))
-                    foreach (var item in mc.Items)
-                        if (item.IsExec == false && item.match(row.Key))
-                        {
-                            item.IsExec = true;
+            // if there are items other than [ADD], then operates [UPDATE / UPSERT / DELETE] items.
+            foreach (var row in io_read_forward(FileHeader.Size, (rh) => false))
+                foreach (var item in mc.Items)
+                    if (item.IsExec == false && item.match(row.Key))
+                    {
+                        if (item.IsUpdate || item.IsUpsert)
+                            WriteBegin(() => retval = update(row.Key, item.Value, item.IndexValues));
+                        else if (item.IsDelete)
+                            WriteBegin(() => delete(row.Key));
 
-                            if (item.IsUpdate || item.IsUpsert)
-                                WriteBegin(() => retval = update(row.Key, item.Value, item.IndexValues));
-                            else if (item.IsDelete)
-                                WriteBegin(() => delete(row.Key));
+                        item.IsExec = true;
+                        if (mc.HasExecutable == false) break;
+                    }
+            if (mc.HasExecutable == false) return retval;
 
-                            if (mc.HasExecutable == false) break;
-                        }
-
-            // operates last UPSERT items not found.
+            // operates last [UPSERT] items not found.
             foreach (var item in mc.Items)
-                if (item.IsUpsert)
-                {
+                if (item.IsExec == false && item.IsUpsert)
                     WriteBegin(() => retval = insert(item.Value, item.IndexValues));
-                    item.IsExec = true;
-                }
 
 
             return retval;
