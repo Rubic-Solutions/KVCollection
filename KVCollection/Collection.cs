@@ -265,8 +265,29 @@ namespace KeyValue
             return KeyValuePair.Create(row.Key, Serializer.GetObject<T>(row.Value));
         }
 
+        #region "GetByIndex"
+        /// <summary>retreives the item by the first IndexValue.</summary>
+        /// <param name="FirstIndexValue">is the first IndexValue to be searched.</param>
+        public KeyValuePair<RowHeader, byte[]> GetRawByIndex(object FirstIndexValue)
+        {
+            foreach (var row in io_read_forward(FileHeader.Size, (rh) => rh.IndexValues[0].Equals(FirstIndexValue)))
+                if (row.Value != null)
+                    return row;
+            return default;
+        }
+        /// <summary>retreives the item by the first IndexValue.</summary>
+        /// <param name="FirstIndexValue">is the first IndexValue to be searched.</param>
+        public KeyValuePair<RowHeader, T> GetByIndex<T>(object FirstIndexValue) => toType<T>(GetRawByIndex(FirstIndexValue));
+        #endregion
+
         #region "GetById"
-        public KeyValuePair<RowHeader, byte[]> GetRaw(int Id) => io_read_forward(FileHeader.Size, (rh) => rh.Id == Id).FirstOrDefault();
+        public KeyValuePair<RowHeader, byte[]> GetRaw(int Id)
+        {
+            foreach (var row in io_read_forward(FileHeader.Size, rh => rh.Id == Id))
+                if (row.Value != null)
+                    return row;
+            return default;
+        }
         public KeyValuePair<RowHeader, T> Get<T>(int Id) => toType<T>(GetRaw(Id));
         #endregion
 
@@ -309,15 +330,6 @@ namespace KeyValue
         public bool Exists(int Id) => GetHeader(Id) is object;
         public bool ExistsByPos(long Pos) => GetHeaderByPos(Pos) is object;
         public bool ExistsByKey(object FirstIndexValue) => GetHeaderByKey(FirstIndexValue) is object;
-        #endregion
-
-        #region "GetByKey"
-        /// <summary>retreives the item by the first IndexValue.</summary>
-        /// <param name="FirstIndexValue">is the first IndexValue to be searched.</param>
-        public KeyValuePair<RowHeader, byte[]> GetRawByIndex(object FirstIndexValue) => io_read_forward(FileHeader.Size, (rh) => rh.IndexValues[0].Equals(FirstIndexValue)).FirstOrDefault();
-        /// <summary>retreives the item by the first IndexValue.</summary>
-        /// <param name="FirstIndexValue">is the first IndexValue to be searched.</param>
-        public KeyValuePair<RowHeader, T> GetByIndex<T>(object FirstIndexValue) => toType<T>(GetRawByIndex(FirstIndexValue));
         #endregion
 
         #region "GetAll"
