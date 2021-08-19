@@ -37,22 +37,19 @@ namespace KeyValue
 
         public Indexer<T> EnsureIndex<K>(Expression<Func<T, K>> fn)
         {
-            if (fn.NodeType != ExpressionType.Lambda)
-                throw new Exception("Only one [field] or [property], is allowed to be specified.");
+            //if (fn.NodeType != ExpressionType.Lambda)
+            //    throw new Exception("Only one [field] or [property], is allowed to be specified.");
 
-            var exp = fn.Body;
+            //var exp = fn.Body;
 
-            if (exp.NodeType != ExpressionType.MemberAccess)
-                throw new Exception("Only one [field] or [property], is allowed to be specified.");
+            //if (exp.NodeType != ExpressionType.MemberAccess)
+            //    throw new Exception("Only one [field] or [property], is allowed to be specified.");
 
-            var member = ((MemberExpression)exp).Member;
+            //var member = ((MemberExpression)exp).Member;
 
-            if (member.DeclaringType != typeof(T))
-                throw new Exception("Only [fields] or [properties] in type of <T>, is allowed to be specified.");
+            //if (member.DeclaringType != typeof(T))
+            //    throw new Exception("Only [fields] or [properties] in type of <T>, is allowed to be specified.");
 
-
-            //if (index.NodeType != ExpressionType.MemberAccess)
-            //    throw new Exception("Only serializable [field] or [property] with output, is allowed to be specified.");
             var fnc = fn.Compile();
             this.indexerInfo.index_value_getter_fns.Add((o) => fnc((T)o));
 
