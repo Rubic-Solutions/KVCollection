@@ -51,7 +51,7 @@ namespace Test
                     .EnsureIndex(x => x.IsAdult)
                     .EnsureIndex(x => x.BirtDate);
 
-                using (var kc = new KeyValue.CollectionBase())
+                using (var kc = new KeyValue.Collection())
                 {
                     sw.Restart();
                     kc.Open("\\", "test");
@@ -99,7 +99,7 @@ namespace Test
                 }
             }
 
-            using (var kc = new KeyValue.CollectionBase())
+            using (var kc = new KeyValue.Collection())
             {
                 kc.Open("\\", "test");
                 kc.Truncate();

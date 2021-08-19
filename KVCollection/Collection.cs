@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace KeyValue
 {
-    public class CollectionBase : IDisposable
+    public class Collection : IDisposable
     {
         [DebuggerBrowsable(DebuggerBrowsableState.Never)] private string name;
 
@@ -21,7 +21,7 @@ namespace KeyValue
         [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal static Dictionary<string, HashSet<string>> hss = null;
         [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal HashSet<string> hs = null;
 
-        static CollectionBase()
+        static Collection()
         {
             cws = new Dictionary<string, CollectionWriter>();
             fhs = new Dictionary<string, FileHeader>();

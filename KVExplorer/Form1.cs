@@ -16,7 +16,7 @@ namespace KVExplorer
     {
         private static string exe_path = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
-        private KeyValue.CollectionBase kvFile = new KeyValue.CollectionBase();
+        private KeyValue.Collection kvFile = new KeyValue.Collection();
 
 
         private readonly DataTable DGRID_LIST_SOURCE = new DataTable();
@@ -266,7 +266,7 @@ namespace KVExplorer
             var dir = fi.DirectoryName;
             var nam = fi.Extension.Length > 0 ? fi.Name.Replace(fi.Extension, "") : fi.Name;
 
-            var kvFileTyped = new KeyValue.CollectionBase();
+            var kvFileTyped = new KeyValue.Collection();
             kvFileTyped.Open(dir, nam);
             DoWorkResult result = null;
 
