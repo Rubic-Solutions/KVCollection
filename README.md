@@ -60,6 +60,10 @@ var count = kc.Count;
 // get value for "Name-50000"
 var item = kc.GetByIndex("Name-50000");
 
+// get values for "Adult=true && BirtDate>dt"
+var dt = DateTime.Now.AddYears(-30);
+var items = kc.GetAll(indexValues => (bool)indexValues[1] && (DateTime)indexValues[2] > dt)
+
 
 // Update an item
 kc.Update(item);
