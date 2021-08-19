@@ -314,10 +314,10 @@ namespace KeyValue
         #region "GetByKey"
         /// <summary>retreives the item by the first IndexValue.</summary>
         /// <param name="FirstIndexValue">is the first IndexValue to be searched.</param>
-        public KeyValuePair<RowHeader, byte[]> GetRawByKey(object FirstIndexValue) => io_read_forward(FileHeader.Size, (rh) => rh.IndexValues[0].Equals(FirstIndexValue)).FirstOrDefault();
+        public KeyValuePair<RowHeader, byte[]> GetRawByIndex(object FirstIndexValue) => io_read_forward(FileHeader.Size, (rh) => rh.IndexValues[0].Equals(FirstIndexValue)).FirstOrDefault();
         /// <summary>retreives the item by the first IndexValue.</summary>
         /// <param name="FirstIndexValue">is the first IndexValue to be searched.</param>
-        public KeyValuePair<RowHeader, T> GetByKey<T>(object FirstIndexValue) => toType<T>(GetRawByKey(FirstIndexValue));
+        public KeyValuePair<RowHeader, T> GetByIndex<T>(object FirstIndexValue) => toType<T>(GetRawByIndex(FirstIndexValue));
         #endregion
 
         #region "GetAll"

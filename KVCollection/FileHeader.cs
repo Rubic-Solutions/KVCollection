@@ -30,7 +30,7 @@ namespace KeyValue
             if (data == null || data.Length == 0) return true;
 
             var pfx_bytes = new byte[2];
-            Buffer.BlockCopy(data, 0, pfx_bytes, 0, pfx_bytes.Length);
+            Array.Copy(data, 0, pfx_bytes, 0, pfx_bytes.Length);
 
             var version = BitConverter.ToInt32(data, 2);
             if (System.Text.Encoding.ASCII.GetString(pfx_bytes) != Prefix ||

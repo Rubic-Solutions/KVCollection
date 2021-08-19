@@ -7,7 +7,7 @@ KVCollection is a small, fast and lightweight .NET Key-Value Collection.
 
 - Serverless
 - Simple API
-- 100% C# code for .NET 4.5 / NETStandard 1.3/2.0 in a single DLL (less than 17kb)
+- 100% C# code for .NET Core in a single DLL (less than 17kb)
 - Thread-safe
 - ACID with full transaction support
 - Data recovery after write failure (WAL log file)
@@ -20,49 +20,72 @@ KVCollection is a small, fast and lightweight .NET Key-Value Collection.
 A quick example for storing and searching documents:
 
 ```C#
+
+public class testModel {
+    public string Name;
+    public int Age;
+    public bool IsAdult;
+    public DateTime BirthDate;
+}
+
+// Define Indexes
+KeyValue.CollectionIndexer.Define<testModel>()
+    .EnsureIndex(x => x.Name)
+    .EnsureIndex(x => x.IsAdult)
+    .EnsureIndex(x => x.BirtDate);
+
+
 // Create an instance
 var kc =  new KeyValue.Collection();
 
-// Get "test" collection. If not exists then will be created.
-kc.Open("test");
+// Get the collection. If not exists then will be created.
+kc.Open("Folder", "CollectionName");
 
 
-// Insert new 100K items
-for (int i = 1; i < 100000; i++)
-    kc.Add("Key-" + i, "This is the content for Key-" + i);
+// Insert new 50K items
+for (int i = 0; i < 50000; i++)
+{
+    var item = new testModel();
+    item.Name = "Name-" + i;
+    item.Age = ((i % 90) + 1) + 10;
+    item.BirtDate = new DateTime(DateTime.Now.Year - item.Age, (i % 12) + 1, 1);
+    item.IsAdult = item.Age > 18;
+
+    kvFileTyped.Add(item);
+}
 
     
 var count = kc.Count;
 
-// get value for "Key-50000"
-var item = kc.Get("Key-50000");
+// get value for "Name-50000"
+var item = kc.GetByIndex("Name-50000");
 
 
 // Update an item
-kc.Update("Key-50000", "new value");
+kc.Update(item);
 
 
 // Delete an item
-kc.Delete("Key-50000");
+kc.Delete(item);
 
 
-// Insert/Update an item
-kc.Upsert("Key-XXX", "value of XXX");
+// Insert or Update an item
+kc.Upsert(item);
 
 
 // Delete all items
 kc.Truncate();
 
 
-// Iteration all keys
-foreach (var key in kc.GetKeys())
+// Iteration all headers
+foreach (var key in kc.GetHeaders())
 {
     ...
 }
 
 
 // Iteration all items
-foreach (var item in kc.All())
+foreach (var item in kc.GetAll())
 {
     // item.Key
     // item.Value

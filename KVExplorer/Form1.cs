@@ -288,7 +288,6 @@ namespace KVExplorer
                     item.IsAdult = item.Age > 18;
                     item.MailBody = "".PadRight(5000, 'X');
 
-                    //kvFileTyped.Add(KeyValue.Serializer.GetBytes(item));
                     kvFileTyped.Add(item);
                 }
             }, "Sample records are being generated.");
