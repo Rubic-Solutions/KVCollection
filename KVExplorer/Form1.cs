@@ -104,7 +104,7 @@ namespace KVExplorer
             var dt = DateTime.Now.AddYears(-30);
             result = await DoWork(() =>
                 {
-                    foreach (var item in kvFile.FindByIndexValues(x => (bool)x[1] && (DateTime)x[2] > dt))
+                    foreach (var item in kvFile.GetRawAll(x => (bool)x[1] && (DateTime)x[2] > dt))
                     {
                         var i = item;
                         adult_count++;
@@ -112,10 +112,10 @@ namespace KVExplorer
                 }, "FindAll predicate search.");
             MessageAdd("\tTotal " + adult_count + " adult(s) found.");
 
-            var lastItem = kvFile.GetLast();
+            var lastItem = kvFile.GetRawLast();
             result = await DoWork(() =>
                 {
-                    var item = kvFile.Get(lastItem.Key.Id);
+                    var item = kvFile.GetRaw(lastItem.Key.Id);
                     if (item.Key is object)
                         MessageAdd("\tKey = " + item.Key.Id);
                 }, "ID FIND search.");
@@ -124,7 +124,7 @@ namespace KVExplorer
                 {
                     KeyValuePair<KeyValue.RowHeader, byte[]> item = default;
                     for (int i = 0; i < 100; i++)
-                        item = kvFile.GetFirst();
+                        item = kvFile.GetRawFirst();
 
                     if (item.Key is object)
                         MessageAdd("\tKey = " + item.Key.Id);
@@ -134,7 +134,7 @@ namespace KVExplorer
                 {
                     KeyValuePair<KeyValue.RowHeader, byte[]> item = default;
                     for (int i = 0; i < 100; i++)
-                        item = kvFile.GetLast();
+                        item = kvFile.GetRawLast();
 
                     if (item.Key is object)
                         MessageAdd("\tKey = " + item.Key.Id);
@@ -205,7 +205,7 @@ namespace KVExplorer
                 string data = null;
                 var result = await DoWork(() =>
                 {
-                    var row = kvFile.GetByPos(EDIT_POS);
+                    var row = kvFile.GetRawByPos(EDIT_POS);
                     head = row.Key;
                     data = System.Text.Encoding.UTF8.GetString(row.Value);
                 }, null);

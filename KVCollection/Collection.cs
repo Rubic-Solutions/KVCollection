@@ -131,7 +131,7 @@ namespace KeyValue
 
         #region "Add"
         /// <summary>Add an item into the collection.</summary>
-        public RowHeader Add(byte[] Value, IEnumerable<object> IndexValues = default) =>
+        public RowHeader AddRaw(byte[] Value, IEnumerable<object> IndexValues = default) =>
             multi_op(mc => mc.Add(Value, IndexValues));
         /// <summary>Add an item into the collection.</summary>
         public RowHeader Add<T>(T Item) => AddMany(new[] { Item });
@@ -149,17 +149,11 @@ namespace KeyValue
 
         #region "Update"
         /// <summary>Updates the item by the [Row-ID]. If the item does not exist, exception occured.</summary>
-        public RowHeader Update(int Id, byte[] Value, IEnumerable<object> IndexValues = default) =>
+        public RowHeader UpdateRaw(int Id, byte[] Value, IEnumerable<object> IndexValues = default) =>
             multi_op(mc => mc.Update(rh => rh.Id == Id, Value, IndexValues));
         /// <summary>Updates the item by the [first index value]. If the item does not exist, exception occured.</summary>
-        public RowHeader Update(byte[] Value, IEnumerable<object> IndexValues = default) =>
+        public RowHeader UpdateRaw(byte[] Value, IEnumerable<object> IndexValues = default) =>
              multi_op(mc => mc.Update(rh => rh.IndexValues[0].Equals(IndexValues.FirstOrDefault()), Value, IndexValues));
-        /// <summary>Updates the item by the [Row-Header]. If the item does not exist, exception occured.</summary>
-        public RowHeader Update(RowHeader rowHeader, byte[] Value, IEnumerable<object> IndexValues = default)
-        {
-            if (rowHeader == null) return default;
-            return multi_op(mc => mc.Update(rh => rh.Id == rowHeader.Id, Value, IndexValues));
-        }
         /// <summary>Updates the item by the [Row-ID]. If the item does not exist, exception occured.</summary>
         public RowHeader Update<T>(int Id, T Value)
         {
@@ -195,17 +189,11 @@ namespace KeyValue
 
         #region "Upsert"
         /// <summary>Sets the item by [Row-ID]. If [Row-ID] does not exist, a new item is created. If [Row-ID] already exists in the collection, it is overwritten.</summary>
-        public RowHeader Upsert(int Id, byte[] Value, IEnumerable<object> IndexValues = default) =>
+        public RowHeader UpsertRaw(int Id, byte[] Value, IEnumerable<object> IndexValues = default) =>
             multi_op(mc => mc.Upsert(rh => rh.Id == Id, Value, IndexValues));
         /// <summary>Sets the item by [first index value]. If [first index value] does not exist, a new item is created. If [first index value] already exists in the collection, it is overwritten.</summary>
-        public RowHeader Upsert(byte[] Value, IEnumerable<object> IndexValues = default) =>
+        public RowHeader UpsertRaw(byte[] Value, IEnumerable<object> IndexValues = default) =>
              multi_op(mc => mc.Upsert(rh => rh.IndexValues[0].Equals(IndexValues.FirstOrDefault()), Value, IndexValues));
-        /// <summary>Sets the item by [Row-Header]. If [Row-Header] does not exist, a new item is created. If [Row-Header] already exists in the collection, it is overwritten.</summary>
-        public RowHeader Upsert(RowHeader rowHeader, byte[] Value, IEnumerable<object> IndexValues = default)
-        {
-            if (rowHeader == null) return default;
-            return multi_op(mc => mc.Upsert(rh => rh.Id == rowHeader.Id, Value, IndexValues));
-        }
         /// <summary>Sets the item by [Row-ID]. If [Row-ID] does not exist, a new item is created. If [Row-ID] already exists in the collection, it is overwritten.</summary>
         public RowHeader Upsert<T>(int Id, T Value)
         {
@@ -235,24 +223,18 @@ namespace KeyValue
         public void Delete(int Id) => DeleteMany(new[] { Id });
         /// <summary>Deletes the items by the [Row-ID]. If the item does not exist, nothing deleted.</summary>
         public void DeleteMany(IEnumerable<int> Ids) => multi_op(mc =>
-            {
-                foreach (var id in Ids)
-                    mc.Delete(rh => rh.Id == id);
-            });
+        {
+            foreach (var id in Ids)
+                mc.Delete(rh => rh.Id == id);
+        });
         /// <summary>Deletes the item by the [first index value]. If the item does not exist, nothing deleted.</summary>
-        public void Delete(object FirstIndexValue) => DeleteMany(new[] { FirstIndexValue });
+        public void DeleteByKey(object FirstIndexValue) => DeleteMany(new[] { FirstIndexValue });
         /// <summary>Deletes the item by the [first index value]. If the item does not exist, nothing deleted.</summary>
-        public void DeleteMany(IEnumerable<object> FirstIndexValues) => multi_op(mc =>
+        public void DeleteByKey(IEnumerable<object> FirstIndexValues) => multi_op(mc =>
         {
             foreach (var FirstIndexValue in FirstIndexValues)
                 mc.Delete(rh => rh.IndexValues[0].Equals(FirstIndexValue));
         });
-        /// <summary>Deletes the item by the [Row-Header]. If the item does not exist, nothing deleted.</summary>
-        public void Delete(RowHeader rowHeader)
-        {
-            if (rowHeader == null) return;
-            multi_op(mc => mc.Delete(rh => rh.Id == rowHeader.Id));
-        }
         /// <summary>Deletes the item by [first index value]. If [first index value] does not exist, a new item is created. If [first index value] already exists in the collection, it is overwritten.</summary>
         public void Delete<T>(T Item) => DeleteMany(new[] { Item });
         /// <summary>Deletes the items by [first index value]. If [first index value] does not exist, a new item is created. If [first index value] already exists in the collection, it is overwritten.</summary>
@@ -276,7 +258,7 @@ namespace KeyValue
             });
         #endregion
 
-        #region "GET / ALL / FIND Methods"
+        #region "GET Methods"
         private KeyValuePair<RowHeader, T> toType<T>(KeyValuePair<RowHeader, byte[]> row)
         {
             if (row.Value == null) return default;
@@ -284,34 +266,33 @@ namespace KeyValue
         }
 
         #region "GetById"
-        public KeyValuePair<RowHeader, byte[]> Get(int Id) => io_read_forward(FileHeader.Size, (rh) => rh.Id == Id).FirstOrDefault();
-        public KeyValuePair<RowHeader, T> Get<T>(int Id) => toType<T>(Get(Id));
+        public KeyValuePair<RowHeader, byte[]> GetRaw(int Id) => io_read_forward(FileHeader.Size, (rh) => rh.Id == Id).FirstOrDefault();
+        public KeyValuePair<RowHeader, T> Get<T>(int Id) => toType<T>(GetRaw(Id));
         #endregion
 
         #region "GetByPos"
         /// <summary>retreives the item by the position of the item.</summary>
         /// <param name="Pos">is the position of the item.</param>
-        public KeyValuePair<RowHeader, byte[]> GetByPos(long Pos) => io_read_forward(Pos, (x) => true).FirstOrDefault();
+        public KeyValuePair<RowHeader, byte[]> GetRawByPos(long Pos) => io_read_forward(Pos, (x) => true).FirstOrDefault();
         /// <summary>retreives the item by the position of the item.</summary>
         /// <param name="Pos">is the position of the item.</param>
-        public KeyValuePair<RowHeader, T> GetByPos<T>(long Pos) => toType<T>(GetByPos(Pos));
+        public KeyValuePair<RowHeader, T> GetByPos<T>(long Pos) => toType<T>(GetRawByPos(Pos));
         #endregion
 
         #region "GetByRowHeader"
-        public KeyValuePair<RowHeader, byte[]> Get(RowHeader rowHeader) => GetByPos(rowHeader?.Pos ?? 0);
+        public KeyValuePair<RowHeader, byte[]> GetRaw(RowHeader rowHeader) => GetRawByPos(rowHeader?.Pos ?? 0);
         public KeyValuePair<RowHeader, T> Get<T>(RowHeader rowHeader) => GetByPos<T>(rowHeader?.Pos ?? 0);
         #endregion
 
         #region "GetFirst"
-        public KeyValuePair<RowHeader, byte[]> GetFirst() => GetByPos(FileHeader.Size);
+        public KeyValuePair<RowHeader, byte[]> GetRawFirst() => GetRawByPos(FileHeader.Size);
         public KeyValuePair<RowHeader, T> GetFirst<T>() => GetByPos<T>(FileHeader.Size);
         #endregion
 
         #region "GetLast"
-        public KeyValuePair<RowHeader, byte[]> GetLast() => GetByPos(this.cw.fs_inx.Length - RowHeader.Size);
+        public KeyValuePair<RowHeader, byte[]> GetRawLast() => GetRawByPos(this.cw.fs_inx.Length - RowHeader.Size);
         public KeyValuePair<RowHeader, T> GetLast<T>() => GetByPos<T>(this.cw.fs_inx.Length - RowHeader.Size);
         #endregion
-
 
         #region "GetHeader(s)"
         public IEnumerable<RowHeader> GetHeaders()
@@ -324,39 +305,41 @@ namespace KeyValue
         public RowHeader GetHeaderByKey(object FirstIndexValue) => FirstIndexValue == null ? null : GetHeaders().FirstOrDefault(row => row.IndexValues[0].Equals(FirstIndexValue));
         #endregion
 
-        #region "GetByIndexValue"
-        /// <summary>retreives the item by the first IndexValue.</summary>
-        /// <param name="FirstIndexValue">is the first IndexValue to be searched.</param>
-        public KeyValuePair<RowHeader, byte[]> GetByIndexValue(object FirstIndexValue) => io_read_forward(FileHeader.Size, (rh) => rh.IndexValues[0].Equals(FirstIndexValue)).FirstOrDefault();
-        /// <summary>retreives the item by the first IndexValue.</summary>
-        /// <param name="FirstIndexValue">is the first IndexValue to be searched.</param>
-        public KeyValuePair<RowHeader, T> GetByIndexValue<T>(object FirstIndexValue) => toType<T>(GetByIndexValue(FirstIndexValue));
+        #region "Exists"
+        public bool Exists(int Id) => GetHeader(Id) is object;
+        public bool ExistsByPos(long Pos) => GetHeaderByPos(Pos) is object;
+        public bool ExistsByKey(object FirstIndexValue) => GetHeaderByKey(FirstIndexValue) is object;
         #endregion
 
+        #region "GetByKey"
+        /// <summary>retreives the item by the first IndexValue.</summary>
+        /// <param name="FirstIndexValue">is the first IndexValue to be searched.</param>
+        public KeyValuePair<RowHeader, byte[]> GetRawByKey(object FirstIndexValue) => io_read_forward(FileHeader.Size, (rh) => rh.IndexValues[0].Equals(FirstIndexValue)).FirstOrDefault();
+        /// <summary>retreives the item by the first IndexValue.</summary>
+        /// <param name="FirstIndexValue">is the first IndexValue to be searched.</param>
+        public KeyValuePair<RowHeader, T> GetByKey<T>(object FirstIndexValue) => toType<T>(GetRawByKey(FirstIndexValue));
+        #endregion
 
-        #region "GetHeader(s)"
-        /// <summary>Retrieves all the elements. </summary>
-        public IEnumerable<KeyValuePair<RowHeader, byte[]>> All() => io_read_forward(FileHeader.Size, (x) => true);
-        /// <summary>Retrieves all the elements. </summary>
-        public IEnumerable<KeyValuePair<RowHeader, T>> All<T>()
+        #region "GetAll"
+        /// <summary>Retrieves all the elements.</summary>
+        public IEnumerable<KeyValuePair<RowHeader, byte[]>> GetRawAll() => io_read_forward(FileHeader.Size, (x) => true);
+        /// <summary>Retrieves all the elements.</summary>
+        public IEnumerable<KeyValuePair<RowHeader, T>> GetAll<T>()
         {
-            foreach (var row in All())
+            foreach (var row in GetRawAll())
                 yield return KeyValuePair.Create(row.Key, Serializer.GetObject<T>(row.Value));
         }
-        #endregion
-
-        #region "FindByIndexValues"
         /// <summary>Retrieves all the elements by searching on indexValues.</summary>
-        public IEnumerable<KeyValuePair<RowHeader, byte[]>> FindByIndexValues(Predicate<object[]> match)
+        public IEnumerable<KeyValuePair<RowHeader, byte[]>> GetRawAll(Predicate<object[]> match)
         {
             foreach (var row in io_read_forward(FileHeader.Size, (rh) => match(rh.IndexValues)))
                 if (row.Value != null)
                     yield return KeyValuePair.Create(row.Key, row.Value);
         }
         /// <summary>Retrieves all the elements by searching on indexValues.</summary>
-        public IEnumerable<KeyValuePair<RowHeader, T>> FindAll<T>(Predicate<object[]> match)
+        public IEnumerable<KeyValuePair<RowHeader, T>> GetAll<T>(Predicate<object[]> match)
         {
-            foreach (var row in FindByIndexValues(match))
+            foreach (var row in GetRawAll(match))
                 yield return KeyValuePair.Create(row.Key, Serializer.GetObject<T>(row.Value));
         }
         #endregion
@@ -388,7 +371,6 @@ namespace KeyValue
                 rh.Id = this.fh.LastId + 1;
                 rh.Pos = this.cw.fs_inx.Length;
                 rh.ValuePos = this.cw.fs_dat.Length;
-
                 rh.ValueSize = Value.Length;
                 rh.ValueActualSize = Value.Length;
                 rh.IndexValues = IndexValues.ToArray();
