@@ -25,10 +25,13 @@ namespace KeyValue
         internal bool FromArray(byte[] data, int start = 0)
         {
             this.Id = BitConverter.ToInt32(data, start);                    // 4 bytes
-            this.ValueSize = BitConverter.ToInt32(data, start + 4);         // 4 bytes
-            this.ValueActualSize = BitConverter.ToInt32(data, start + 8);   // 4 bytes
-            this.ValuePos = BitConverter.ToInt64(data, start + 12);          // 8 bytes
-            this.IndexValues = Serializer.GetObjects(data, start + 20, SizeOfIndex).ToArray();
+            if (this.Id > 0) // is it i not deleted
+            {
+                this.ValueSize = BitConverter.ToInt32(data, start + 4);         // 4 bytes
+                this.ValueActualSize = BitConverter.ToInt32(data, start + 8);   // 4 bytes
+                this.ValuePos = BitConverter.ToInt64(data, start + 12);          // 8 bytes
+                this.IndexValues = Serializer.GetObjects(data, start + 20, SizeOfIndex).ToArray();
+            }
             return true;
         }
         internal byte[] ToArray(bool withPrimaryKey)

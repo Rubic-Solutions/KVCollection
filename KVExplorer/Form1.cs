@@ -77,8 +77,23 @@ namespace KVExplorer
             DGRID_LIST_SOURCE.Clear();
             SetItem(-1);
 
-            var items = new List<KeyValue.RowHeader>();
-            var result = await DoWork(() =>
+            var items = new List<KeyValue.RowHeader>(1000);
+            DoWorkResult result = null; 
+
+
+            items.Clear();
+            result = await DoWork(() =>
+            {
+                if (kvFile.Count == 0) return;
+                foreach (var item in kvFile.GetHeaders(true))
+                    items.Add(item);
+
+            }, "Keys are being loaded reverse.");
+            MessageAdd("\tCount = " + items.Count);
+            if (result.Success == false) return false;
+
+            items.Clear();
+            result = await DoWork(() =>
             {
                 if (kvFile.Count == 0) return;
                 foreach (var item in kvFile.GetHeaders())
@@ -87,6 +102,18 @@ namespace KVExplorer
             }, "Keys are being loaded.");
             MessageAdd("\tCount = " + items.Count);
             if (result.Success == false) return false;
+
+            items.Clear();
+            result = await DoWork(() =>
+            {
+                if (kvFile.Count == 0) return;
+                foreach (var item in kvFile.GetHeaders(true))
+                    items.Add(item);
+
+            }, "Keys are being loaded reverse.");
+            MessageAdd("\tCount = " + items.Count);
+            if (result.Success == false) return false;
+
 
             result = await DoWork(() =>
             {
