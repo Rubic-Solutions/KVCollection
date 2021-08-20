@@ -324,17 +324,17 @@ namespace KeyValue
             from x in Reverse ? io_read_backward(readValue: true) : io_read_forward(readValue: true) select x;
 
         /// <summary>Retrieves all the elements.</summary>
-        public IEnumerable<KeyValuePair<RowHeader, T>> GetAll<T>()
+        public IEnumerable<KeyValuePair<RowHeader, T>> GetAll<T>(bool Reverse = false)
         {
-            foreach (var row in GetRawAll())
+            foreach (var row in GetRawAll(Reverse))
                 yield return KeyValuePair.Create(row.Key, Serializer.GetObject<T>(row.Value));
         }
         /// <summary>Retrieves all the elements by searching on indexValues.</summary>
         public IEnumerable<KeyValuePair<RowHeader, byte[]>> GetRawAll(Predicate<object[]> match, bool Reverse = false) =>
-            from x 
-            in Reverse ? 
-                io_read_backward(match: rh => match(rh.IndexValues), readValue: true) : 
-                io_read_forward(match: rh => match(rh.IndexValues), readValue: true) 
+            from x
+            in Reverse ?
+                io_read_backward(match: rh => match(rh.IndexValues), readValue: true) :
+                io_read_forward(match: rh => match(rh.IndexValues), readValue: true)
             select x;
 
         /// <summary>Retrieves all the elements by searching on indexValues.</summary>
