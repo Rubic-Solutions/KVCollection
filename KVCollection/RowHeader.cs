@@ -16,11 +16,11 @@ namespace KeyValue
         public int ValueSize;
         public object[] IndexValues;
 
-        internal const int Size = 128;
+        internal const int Size = 255;
         internal const int SizeOfIndex = Size - (4 + 4 + 4 + 8);
 
         internal void SetDeleted() => this.Id = 0;
-        internal bool DetDeleted() => this.Id == 0;
+        internal bool IsDeleted => this.Id == 0;
 
         internal bool FromArray(byte[] data, int start = 0)
         {
