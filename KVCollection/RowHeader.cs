@@ -34,15 +34,17 @@ namespace KeyValue
             }
             return true;
         }
-        internal byte[] ToArray(bool withPrimaryKey)
+        internal byte[] ToArray()
         {
-            var retval = Serializer.ConcatBytes(Size,
-                                                BitConverter.GetBytes(Id),                  // 4 bytes
-                                                BitConverter.GetBytes(ValueSize),           // 4 bytes
-                                                BitConverter.GetBytes(ValueActualSize),     // 4 bytes
-                                                BitConverter.GetBytes(ValuePos),            // 8 bytes
-                                                Serializer.GetBytes(IndexValues));
-            return retval;
+            if (Id == 0)
+                return Serializer.ConcatBytes(Size, BitConverter.GetBytes(Id));
+            else
+                return Serializer.ConcatBytes(Size,
+                                              BitConverter.GetBytes(Id),                  // 4 bytes
+                                              BitConverter.GetBytes(ValueSize),           // 4 bytes
+                                              BitConverter.GetBytes(ValueActualSize),     // 4 bytes
+                                              BitConverter.GetBytes(ValuePos),            // 8 bytes
+                                              Serializer.GetBytes(IndexValues));
         }
 
     }

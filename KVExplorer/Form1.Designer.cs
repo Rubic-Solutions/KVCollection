@@ -37,6 +37,7 @@ namespace KVExplorer
             this.splitContainer2 = new System.Windows.Forms.SplitContainer();
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
             this.panel3 = new System.Windows.Forms.Panel();
+            this.BTN_SHRINK = new System.Windows.Forms.Button();
             this.BTN_TEST = new System.Windows.Forms.Button();
             this.BTN_OPEN = new System.Windows.Forms.Button();
             this.DGRID_FILTER = new System.Windows.Forms.TextBox();
@@ -141,6 +142,7 @@ namespace KVExplorer
             // panel3
             // 
             this.panel3.BackColor = System.Drawing.Color.White;
+            this.panel3.Controls.Add(this.BTN_SHRINK);
             this.panel3.Controls.Add(this.BTN_TEST);
             this.panel3.Controls.Add(this.BTN_OPEN);
             this.panel3.Controls.Add(this.DGRID_FILTER);
@@ -154,6 +156,21 @@ namespace KVExplorer
             this.panel3.Padding = new System.Windows.Forms.Padding(5);
             this.panel3.Size = new System.Drawing.Size(240, 392);
             this.panel3.TabIndex = 0;
+            // 
+            // BTN_SHRINK
+            // 
+            this.BTN_SHRINK.BackColor = System.Drawing.Color.WhiteSmoke;
+            this.BTN_SHRINK.FlatAppearance.BorderColor = System.Drawing.Color.Gainsboro;
+            this.BTN_SHRINK.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.BTN_SHRINK.ForeColor = System.Drawing.Color.Black;
+            this.BTN_SHRINK.Location = new System.Drawing.Point(77, 12);
+            this.BTN_SHRINK.Name = "BTN_SHRINK";
+            this.BTN_SHRINK.Size = new System.Drawing.Size(64, 29);
+            this.BTN_SHRINK.TabIndex = 28;
+            this.BTN_SHRINK.Text = "Shrink";
+            this.BTN_SHRINK.UseVisualStyleBackColor = false;
+            this.BTN_SHRINK.Visible = false;
+            this.BTN_SHRINK.Click += new System.EventHandler(this.BTN_SHRINK_Click);
             // 
             // BTN_TEST
             // 
@@ -478,6 +495,7 @@ namespace KVExplorer
         private System.Windows.Forms.TextBox EDIT_KEY;
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.Button BTN_NEW;
+        private System.Windows.Forms.Button BTN_SHRINK;
     }
 }
 

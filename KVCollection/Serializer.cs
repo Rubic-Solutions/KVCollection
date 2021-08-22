@@ -101,53 +101,53 @@ namespace KeyValue
             }
             return retval.ToArray();
         }
-        public static IEnumerable<object> GetObjects(byte[] bytes, int start = 0, int count = -1)
+        public static IEnumerable<object> GetObjects(byte[] bytes, int startIndex = 0, int count = -1)
         {
             var enc = System.Text.Encoding.UTF8;
-            if (count == -1) count = bytes.Length;
-            for (int pos = start; pos < count; pos++)
+            var lastIndex = count == -1 ? bytes.Length - startIndex : startIndex + count;
+            if (lastIndex < startIndex) yield break;
+
+            while (startIndex < lastIndex)
             {
-                byte typ = bytes[pos];
+                byte typ = bytes[startIndex];
                 if (typ == 0) break;
 
-                pos++;
-                var len = bytes[pos];
+                startIndex++;
+                var len = bytes[startIndex];
                 if (len == 0) break;
 
-                pos++;
+                startIndex++;
                 if (typ == 1)
-                    yield return enc.GetString(bytes, pos, len);
-                if (typ == 2)
-                    yield return BitConverter.ToBoolean(bytes, pos);
-                if (typ == 3)
-                    yield return BitConverter.ToInt16(bytes, pos);
-                if (typ == 4)
-                    yield return BitConverter.ToUInt16(bytes, pos);
-                if (typ == 5)
-                    yield return BitConverter.ToInt32(bytes, pos);
-                if (typ == 6)
-                    yield return BitConverter.ToUInt32(bytes, pos);
-                if (typ == 7)
-                    yield return BitConverter.ToInt64(bytes, pos);
-                if (typ == 8)
-                    yield return BitConverter.ToUInt64(bytes, pos);
-                if (typ == 9)
-                    yield return BitConverter.ToSingle(bytes, pos);
-                if (typ == 10)
-                    yield return BitConverter.ToDouble(bytes, pos);
-                if (typ == 11)
-                    yield return getDecimalValue(bytes, pos);
-                if (typ == 12)
-                    yield return new DateTime(BitConverter.ToInt64(bytes, pos));
-                if (typ == 13)
+                    yield return enc.GetString(bytes, startIndex, len);
+                else if (typ == 2)
+                    yield return BitConverter.ToBoolean(bytes, startIndex);
+                else if(typ == 3)
+                    yield return BitConverter.ToInt16(bytes, startIndex);
+                else if (typ == 4)
+                    yield return BitConverter.ToUInt16(bytes, startIndex);
+                else if (typ == 5)
+                    yield return BitConverter.ToInt32(bytes, startIndex);
+                else if (typ == 6)
+                    yield return BitConverter.ToUInt32(bytes, startIndex);
+                else if (typ == 7)
+                    yield return BitConverter.ToInt64(bytes, startIndex);
+                else if (typ == 8)
+                    yield return BitConverter.ToUInt64(bytes, startIndex);
+                else if (typ == 9)
+                    yield return BitConverter.ToSingle(bytes, startIndex);
+                else if (typ == 10)
+                    yield return BitConverter.ToDouble(bytes, startIndex);
+                else if (typ == 11)
+                    yield return getDecimalValue(bytes, startIndex);
+                else if (typ == 12)
+                    yield return new DateTime(BitConverter.ToInt64(bytes, startIndex));
+                else if (typ == 13)
                 {
                     var retval = new byte[len];
-                    System.Buffer.BlockCopy(bytes, pos, retval, 0, len);
+                    System.Buffer.BlockCopy(bytes, startIndex, retval, 0, len);
                     yield return retval;
-                    //yield return bytes new DateTime(BitConverter.ToInt64(bytes, pos));
                 }
-
-                pos += len - 1;
+                startIndex += len;  
             }
         }
 

@@ -65,6 +65,7 @@ namespace KVExplorer
                 kvFile.Open(dir, nam);  // => bu method OPEN ve COUNT vs interface de olmalı. 
                 SetItem(-1);
                 BTN_CLOSE.Visible = true;
+                BTN_SHRINK.Visible = true;
                 BTN_OPEN.Visible = false;
                 BTN_TEST.Visible = false;
             }, "File is being loaded.");
@@ -78,7 +79,7 @@ namespace KVExplorer
             SetItem(-1);
 
             var items = new List<KeyValue.RowHeader>(1000);
-            DoWorkResult result = null; 
+            DoWorkResult result = null;
 
 
             items.Clear();
@@ -142,7 +143,7 @@ namespace KVExplorer
             var lastItem = kvFile.GetRawLast();
             result = await DoWork(() =>
                 {
-                    var item = kvFile.GetRaw(lastItem.Key.Id);
+                    var item = kvFile.GetRaw(lastItem.Key?.Id ?? 0);
                     if (item.Key is object)
                         MessageAdd("\tKey = " + item.Key.Id);
                 }, "ID FIND search.");
@@ -154,7 +155,7 @@ namespace KVExplorer
                         item = kvFile.GetRawFirst();
 
                     if (item.Key is object)
-                        MessageAdd("\tKey = " + item.Key.Id);
+                        MessageAdd("\tKey = " + (item.Key?.Id.ToString() ?? ""));
                 }, "Get First Record 100 times.");
 
             result = await DoWork(() =>
@@ -164,7 +165,7 @@ namespace KVExplorer
                         item = kvFile.GetRawLast();
 
                     if (item.Key is object)
-                        MessageAdd("\tKey = " + item.Key.Id);
+                        MessageAdd("\tKey = " + (item.Key?.Id.ToString() ?? ""));
                 }, "Get Last Record 100 times.");
 
             return result.Success;
@@ -184,6 +185,7 @@ namespace KVExplorer
             DGRID_LIST_SOURCE.Clear();
             SetItem(-1);
             BTN_CLOSE.Visible = false;
+            BTN_SHRINK.Visible = false;
             BTN_OPEN.Visible = true;
             BTN_TEST.Visible = true;
         }
@@ -200,7 +202,7 @@ namespace KVExplorer
             if (DGRID_LIST.SelectedRows.Count > 0)
                 if (DGRID_LIST.SelectedCells.Count > 0)
                 {
-                    selPos = (long)DGRID_LIST_SOURCE.Rows[DGRID_LIST.SelectedRows[0].Index][0];
+                    selPos = (long)DGRID_LIST.Rows[DGRID_LIST.SelectedRows[0].Index].Cells[0].Value;
                 }
 
             SetItem(selPos);
@@ -234,9 +236,11 @@ namespace KVExplorer
                 {
                     var row = kvFile.GetRawByPos(EDIT_POS);
                     head = row.Key;
-                    data = System.Text.Encoding.UTF8.GetString(row.Value);
+                    data = row.Value == null ? null : System.Text.Encoding.UTF8.GetString(row.Value);
                 }, null);
-                EDIT_KEY.Text = string.Join(", ",  head.IndexValues );
+
+                if (head == null) return;
+                EDIT_KEY.Text = string.Join(", ", head);
                 EDIT_VALUE.Text = data;
 
                 var txt = new List<string>();
@@ -276,8 +280,17 @@ namespace KVExplorer
         {
             var result = await DoWork(() =>
             {
-                //kvFile.Delete(EDIT_KEY.Text);
+                kvFile.Delete(EDIT_POS);
+                DGRID_LIST.Rows.RemoveAt(DGRID_LIST.SelectedRows[0].Index);
             }, "Item has been deleted.");
+        }
+        private async void BTN_SHRINK_Click(object sender, EventArgs e)
+        {
+            var result = await DoWork(() =>
+            {
+                kvFile.Shrink();
+                loadKeys();
+            }, "Collection has been shrinked.");
         }
         #endregion
 

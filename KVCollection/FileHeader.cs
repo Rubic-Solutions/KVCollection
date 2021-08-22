@@ -1,8 +1,13 @@
 ﻿using System;
-using System.Diagnostics;
 
 namespace KeyValue
 {
+    internal enum FileState
+    {
+         Normal=0,
+         Shrink=1
+    }
+
     internal class FileHeader
     {
         internal long Pos => 0;
@@ -10,20 +15,22 @@ namespace KeyValue
         internal int Version => 2210729;    // 4 byte
         internal long Count;                // 8 byte
         internal int LastId;                // 4 byte
-        internal const int Size = 2 + 4 + 8 + 4;
+        internal FileState State ;            // 4 byte (0:Normal, 1:Shrink, n:...)
+        internal const int Size = 255;
 
         internal byte[] ToArray() =>
             Serializer.ConcatBytes(Size,
                 System.Text.Encoding.ASCII.GetBytes(Prefix),
                 BitConverter.GetBytes(Version),
                 BitConverter.GetBytes(Count),
-                BitConverter.GetBytes(LastId));
+                BitConverter.GetBytes(LastId),
+                BitConverter.GetBytes((int)State ));
 
         /// POS=0  ->   Len=30  
         /// 
-        /// Pfx     Vers(4)     Count(8)    LastId(4)
-        /// -----   ---------   ---------   ---------
-        /// 00 01   02 ... 05   06 ... 13   14 ... 17
+        /// Pfx     Vers(4)     Count(8)    LastId(4)  Mode(2)
+        /// -----   ---------   ---------   ---------  ---------
+        /// 00 01   02 ... 05   06 ... 13   14 ... 17  18 ... 19
 
         internal bool FromArray(byte[] data)
         {
@@ -39,6 +46,7 @@ namespace KeyValue
             // ...
             this.Count = BitConverter.ToInt64(data, 6);
             this.LastId = BitConverter.ToInt32(data, 14);
+            this.State  = (FileState)BitConverter.ToInt32(data, 18);
             return true;
         }
     }

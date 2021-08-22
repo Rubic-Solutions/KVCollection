@@ -8,6 +8,8 @@ namespace KeyValue
 {
     public class Collection : IDisposable
     {
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)] private string dir;
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)] private string colName;
         [DebuggerBrowsable(DebuggerBrowsableState.Never)] private string name;
 
         [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal static object lock_ctor = new object();
@@ -18,20 +20,18 @@ namespace KeyValue
         [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal static Dictionary<string, FileHeader> fhs = null;
         [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal FileHeader fh = null;
 
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal static Dictionary<string, HashSet<string>> hss = null;
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal HashSet<string> hs = null;
-
         static Collection()
         {
             cws = new Dictionary<string, CollectionWriter>();
             fhs = new Dictionary<string, FileHeader>();
-            hss = new Dictionary<string, HashSet<string>>();
         }
 
         public void Dispose() => Close();
 
 
         #region "Open/Close"
+        public string Directory => dir;
+        public string CollectionName => colName;
         public string Name => name;
         public string IndexFile => name + ".inx";
         public string DataFile => name + ".dat";
@@ -47,6 +47,8 @@ namespace KeyValue
 
             if (this.name == name) return;
             if (this.name != null) this.Close();
+            this.dir = Directory;
+            this.colName = CollectionName;
             this.name = name;
 
             // index and data files are must be exist at same time.
@@ -69,13 +71,11 @@ namespace KeyValue
                 {
                     cws.Add(name, new CollectionWriter(Directory, CollectionName));
                     fhs.Add(name, new FileHeader());
-                    hss.Add(name, new HashSet<string>());
                     is_first = true;
                 }
 
                 this.cw = cws[name];
                 this.fh = fhs[name];
-                this.hs = hss[name];
 
                 if (is_first)
                 {
@@ -89,19 +89,13 @@ namespace KeyValue
                             throw new Exception("Invalid file header.");
 
                         this.fh.FromArray(bytes);
+                        if (this.fh.State == FileState.Shrink)
+                            this.Shrink();  // resume the shrink
                     }
                     else
                     {
-                        WriteBegin(null);
+                        WriterBegin(null);
                     }
-
-                    //var headers = GetHeaders().ToList();
-                    //if (headers.Count > 0)
-                    //{
-                    //    foreach (var rh in headers)
-                    //        hs.Add(rh.PrimaryKey);
-
-                    //}
                 }
             }
 
@@ -119,7 +113,6 @@ namespace KeyValue
                     this.cw.Close();
                     cws.Remove(this.name);
                     fhs.Remove(this.name);
-                    hss.Remove(this.name);
                 }
                 this.name = null;
             }
@@ -129,17 +122,25 @@ namespace KeyValue
         #region "Public Operation Methods"
         public long Count => this.fh.Count;
 
+        public IndexerInfo GetIndexerInfo<T>()
+        {
+            var retval = CollectionIndexer.Get<T>();
+            if (retval == null) throw new Exception("There is no collection index information for " + typeof(T).FullName + ".");
+            if (retval.index_value_getter_fns.Count == 0) throw new Exception("At least one index info must be specified by " + nameof(Indexer<T>.EnsureIndex) + " for " + typeof(T).FullName + ".");
+            return retval;
+        }
+
         #region "Add"
         /// <summary>Add an item into the collection.</summary>
         public RowHeader AddRaw(byte[] Value, IEnumerable<object> IndexValues = default) =>
-            multi_op(mc => mc.Add(Value, IndexValues));
+            writer_multi(mc => mc.Add(Value, IndexValues));
         /// <summary>Add an item into the collection.</summary>
         public RowHeader Add<T>(T Item) => AddMany(new[] { Item });
         /// <summary>Add an items into the collection. Return RowHeader for the last item has appended.</summary>
         public RowHeader AddMany<T>(IEnumerable<T> Items)
         {
             var inx_info = GetIndexerInfo<T>();
-            return multi_op(mc =>
+            return writer_multi(mc =>
             {
                 foreach (var item in Items)
                     mc.Add(Serializer.GetBytes(item), inx_info.CreateValues(item));
@@ -150,21 +151,21 @@ namespace KeyValue
         #region "Update"
         /// <summary>Updates the item by the [Row-ID]. If the item does not exist, exception occured.</summary>
         public RowHeader UpdateRaw(int Id, byte[] Value, IEnumerable<object> IndexValues = default) =>
-            multi_op(mc => mc.Update(rh => rh.Id == Id, Value, IndexValues));
+            writer_multi(mc => mc.Update(rh => rh.Id == Id, Value, IndexValues));
         /// <summary>Updates the item by the [first index value]. If the item does not exist, exception occured.</summary>
         public RowHeader UpdateRaw(byte[] Value, IEnumerable<object> IndexValues = default) =>
-             multi_op(mc => mc.Update(rh => rh.IndexValues[0].Equals(IndexValues.FirstOrDefault()), Value, IndexValues));
+             writer_multi(mc => mc.Update(rh => rh.IndexValues[0].Equals(IndexValues.FirstOrDefault()), Value, IndexValues));
         /// <summary>Updates the item by the [Row-ID]. If the item does not exist, exception occured.</summary>
         public RowHeader Update<T>(int Id, T Value)
         {
             var inx_info = GetIndexerInfo<T>();
-            return multi_op(mc => mc.Update(rh => rh.Id == Id, Serializer.GetBytes(Value), inx_info.CreateValues(Value)));
+            return writer_multi(mc => mc.Update(rh => rh.Id == Id, Serializer.GetBytes(Value), inx_info.CreateValues(Value)));
         }
         /// <summary>Updates the items by the [Row-ID]. If the item does not exist, exception occured.</summary>
         public RowHeader UpdateMany<T>(IEnumerable<(int Id, T Value)> Items)
         {
             var inx_info = GetIndexerInfo<T>();
-            return multi_op(mc =>
+            return writer_multi(mc =>
             {
                 foreach (var item in Items)
                     mc.Update(rh => rh.Id == item.Id, Serializer.GetBytes(item), inx_info.CreateValues(item));
@@ -176,7 +177,7 @@ namespace KeyValue
         public RowHeader UpdateMany<T>(IEnumerable<T> Items)
         {
             var inx_info = GetIndexerInfo<T>();
-            return multi_op(mc =>
+            return writer_multi(mc =>
             {
                 foreach (var item in Items)
                 {
@@ -190,15 +191,15 @@ namespace KeyValue
         #region "Upsert"
         /// <summary>Sets the item by [Row-ID]. If [Row-ID] does not exist, a new item is created. If [Row-ID] already exists in the collection, it is overwritten.</summary>
         public RowHeader UpsertRaw(int Id, byte[] Value, IEnumerable<object> IndexValues = default) =>
-            multi_op(mc => mc.Upsert(rh => rh.Id == Id, Value, IndexValues));
+            writer_multi(mc => mc.Upsert(rh => rh.Id == Id, Value, IndexValues));
         /// <summary>Sets the item by [first index value]. If [first index value] does not exist, a new item is created. If [first index value] already exists in the collection, it is overwritten.</summary>
         public RowHeader UpsertRaw(byte[] Value, IEnumerable<object> IndexValues = default) =>
-             multi_op(mc => mc.Upsert(rh => rh.IndexValues[0].Equals(IndexValues.FirstOrDefault()), Value, IndexValues));
+             writer_multi(mc => mc.Upsert(rh => rh.IndexValues[0].Equals(IndexValues.FirstOrDefault()), Value, IndexValues));
         /// <summary>Sets the item by [Row-ID]. If [Row-ID] does not exist, a new item is created. If [Row-ID] already exists in the collection, it is overwritten.</summary>
         public RowHeader Upsert<T>(int Id, T Value)
         {
             var inx_info = GetIndexerInfo<T>();
-            return multi_op(mc => mc.Upsert(rh => rh.Id == Id, Serializer.GetBytes(Value), inx_info.CreateValues(Value)));
+            return writer_multi(mc => mc.Upsert(rh => rh.Id == Id, Serializer.GetBytes(Value), inx_info.CreateValues(Value)));
         }
         /// <summary>Sets the item by [first index value]. If [first index value] does not exist, a new item is created. If [first index value] already exists in the collection, it is overwritten.</summary>
         public RowHeader Upsert<T>(T Item) => UpsertMany(new[] { Item });
@@ -206,7 +207,7 @@ namespace KeyValue
         public RowHeader UpsertMany<T>(IEnumerable<T> Items)
         {
             var inx_info = GetIndexerInfo<T>();
-            return multi_op(mc =>
+            return writer_multi(mc =>
             {
                 foreach (var item in Items)
                 {
@@ -222,15 +223,23 @@ namespace KeyValue
         /// <summary>Deletes the item by the [Row-ID]. If the item does not exist, nothing deleted.</summary>
         public void Delete(int Id) => DeleteMany(new[] { Id });
         /// <summary>Deletes the items by the [Row-ID]. If the item does not exist, nothing deleted.</summary>
-        public void DeleteMany(IEnumerable<int> Ids) => multi_op(mc =>
+        public void DeleteMany(IEnumerable<int> Ids) => writer_multi(mc =>
         {
             foreach (var id in Ids)
                 mc.Delete(rh => rh.Id == id);
         });
+        /// <summary>Deletes the item by the [Row-ID]. If the item does not exist, nothing deleted.</summary>
+        public void Delete(long Position) => DeleteMany(new[] { Position });
+        /// <summary>Deletes the items by the [Row-ID]. If the item does not exist, nothing deleted.</summary>
+        public void DeleteMany(IEnumerable<long> Positions) => writer_multi(mc =>
+        {
+            foreach (var Position in Positions)
+                WriterBegin(() => writer_delete(Position));
+        });
         /// <summary>Deletes the item by the [first index value]. If the item does not exist, nothing deleted.</summary>
         public void DeleteByKey(object FirstIndexValue) => DeleteMany(new[] { FirstIndexValue });
         /// <summary>Deletes the item by the [first index value]. If the item does not exist, nothing deleted.</summary>
-        public void DeleteByKey(IEnumerable<object> FirstIndexValues) => multi_op(mc =>
+        public void DeleteByKey(IEnumerable<object> FirstIndexValues) => writer_multi(mc =>
         {
             foreach (var FirstIndexValue in FirstIndexValues)
                 mc.Delete(rh => rh.IndexValues[0].Equals(FirstIndexValue));
@@ -238,7 +247,7 @@ namespace KeyValue
         /// <summary>Deletes the item by [first index value]. If [first index value] does not exist, a new item is created. If [first index value] already exists in the collection, it is overwritten.</summary>
         public void Delete<T>(T Item) => DeleteMany(new[] { Item });
         /// <summary>Deletes the items by [first index value]. If [first index value] does not exist, a new item is created. If [first index value] already exists in the collection, it is overwritten.</summary>
-        public void DeleteMany<T>(IEnumerable<T> Items) => multi_op(mc =>
+        public void DeleteMany<T>(IEnumerable<T> Items) => writer_multi(mc =>
         {
             var inx_info = GetIndexerInfo<T>();
             foreach (var item in Items)
@@ -249,13 +258,66 @@ namespace KeyValue
         #region "Truncate"
         /// <summary>All records is removed from collection, and file is shrinked.</summary>
         public void Truncate() =>
-            WriteBegin(() =>
+            WriterBegin(() =>
             {
                 this.cw.Truncate();
                 this.fh = new FileHeader();
-
-                hs.Clear();
             });
+        public void Shrink()
+        {
+            WriterBegin(() => this.fh.State = FileState.Shrink, CheckState: false);
+            var fi = new System.IO.FileInfo(name);
+            var inx_file = this.IndexFile;
+            var dat_file = this.DataFile;
+
+            {
+                //var inx_pos = FileHeader.Size;
+                var inx_pos = FileHeader.Size;
+                var dat_pos = 0;
+                var last_id = -1;
+                bool has_deleted = false;
+                foreach (var item in reader(reverse: false, readValue: true, readDeleted: true, CheckState: false))
+                {
+
+                    // if the shrink operation aborted, is continued
+                    // then the row with same ID can be iterate
+                    if (last_id == item.Key.Id) continue;
+                    last_id = item.Key.Id;
+
+                    if (item.Key.IsDeleted)
+                    {
+                        has_deleted = true;
+                        continue;
+                    }
+
+                    if (has_deleted)
+                        WriterBegin(() =>
+                        {
+                            item.Key.Pos = inx_pos;
+                            item.Key.ValueSize = item.Value.Length;
+                            item.Key.ValueActualSize = item.Value.Length;
+                            item.Key.ValuePos = dat_pos;
+
+                            writer_set_row_header(item.Key);
+                            writer_set_row_value(item.Key, item.Value);
+                        }, CheckState: false);
+
+                    inx_pos += RowHeader.Size;
+                    dat_pos += item.Value.Length;
+                }
+                this.cw.fs_inx.SetLength(inx_pos);
+                this.cw.fs_inx.Flush();
+
+                this.cw.fs_dat.SetLength(dat_pos);
+                this.cw.fs_dat.Flush();
+            }
+            WriterBegin(() => this.fh.State = FileState.Normal, CheckState: false);
+
+            //// collection writer re-initialize for new pointers.
+            //cws[name].Close();
+            //cws[name]= new CollectionWriter(Directory, CollectionName);
+            //this.cw = cws[name];
+        }
         #endregion
 
         #region "GET Methods"
@@ -268,21 +330,21 @@ namespace KeyValue
         #region "GetByIndex"
         /// <summary>retreives the item by the first IndexValue.</summary>
         /// <param name="FirstIndexValue">is the first IndexValue to be searched.</param>
-        public KeyValuePair<RowHeader, byte[]> GetRawByIndex(object FirstIndexValue) => io_read_forward(FileHeader.Size, rh => rh.IndexValues[0].Equals(FirstIndexValue), true).FirstOrDefault();
+        public KeyValuePair<RowHeader, byte[]> GetRawByIndex(object FirstIndexValue) => FirstIndexValue==null ? default : reader(reverse: false, FileHeader.Size, rh => rh.IndexValues[0].Equals(FirstIndexValue), true).FirstOrDefault();
         /// <summary>retreives the item by the first IndexValue.</summary>
         /// <param name="FirstIndexValue">is the first IndexValue to be searched.</param>
         public KeyValuePair<RowHeader, T> GetByIndex<T>(object FirstIndexValue) => toType<T>(GetRawByIndex(FirstIndexValue));
         #endregion
 
         #region "GetById"
-        public KeyValuePair<RowHeader, byte[]> GetRaw(int Id) => io_read_forward(FileHeader.Size, rh => rh.Id == Id, true).FirstOrDefault();
+        public KeyValuePair<RowHeader, byte[]> GetRaw(int Id) => Id==0 ? default : reader(reverse: false, FileHeader.Size, rh => rh.Id == Id, true).FirstOrDefault();
         public KeyValuePair<RowHeader, T> Get<T>(int Id) => toType<T>(GetRaw(Id));
         #endregion
 
         #region "GetByPos"
         /// <summary>retreives the item by the position of the item.</summary>
         /// <param name="Pos">is the position of the item.</param>
-        public KeyValuePair<RowHeader, byte[]> GetRawByPos(long Pos) => io_read_forward(Pos, null, true).FirstOrDefault();
+        public KeyValuePair<RowHeader, byte[]> GetRawByPos(long Pos) => Pos == 0 ? default : reader(reverse: false, Pos, null, true).FirstOrDefault();
         /// <summary>retreives the item by the position of the item.</summary>
         /// <param name="Pos">is the position of the item.</param>
         public KeyValuePair<RowHeader, T> GetByPos<T>(long Pos) => toType<T>(GetRawByPos(Pos));
@@ -304,8 +366,7 @@ namespace KeyValue
         #endregion
 
         #region "GetHeader(s)"
-        public IEnumerable<RowHeader> GetHeaders(bool Reverse = false) =>
-            from x in Reverse ? io_read_backward() : io_read_forward() select x.Key;
+        public IEnumerable<RowHeader> GetHeaders(bool Reverse = false) => from x in reader(reverse: Reverse) select x.Key;
 
         public RowHeader GetHeader(int Id) => GetHeaders().FirstOrDefault(row => row.Id == Id);
         public RowHeader GetHeaderByPos(long Pos) => GetHeaders().FirstOrDefault(row => row.Pos == Pos);
@@ -321,7 +382,7 @@ namespace KeyValue
         #region "GetAll"
         /// <summary>Retrieves all the elements.</summary>
         public IEnumerable<KeyValuePair<RowHeader, byte[]>> GetRawAll(bool Reverse = false) =>
-            from x in Reverse ? io_read_backward(readValue: true) : io_read_forward(readValue: true) select x;
+            from x in reader(reverse: Reverse, readValue: true) select x;
 
         /// <summary>Retrieves all the elements.</summary>
         public IEnumerable<KeyValuePair<RowHeader, T>> GetAll<T>(bool Reverse = false)
@@ -332,9 +393,7 @@ namespace KeyValue
         /// <summary>Retrieves all the elements by searching on indexValues.</summary>
         public IEnumerable<KeyValuePair<RowHeader, byte[]>> GetRawAll(Predicate<object[]> match, bool Reverse = false) =>
             from x
-            in Reverse ?
-                io_read_backward(match: rh => match(rh.IndexValues), readValue: true) :
-                io_read_forward(match: rh => match(rh.IndexValues), readValue: true)
+            in reader(reverse: Reverse ,match: rh => match(rh.IndexValues), readValue: true) 
             select x;
 
         /// <summary>Retrieves all the elements by searching on indexValues.</summary>
@@ -348,24 +407,25 @@ namespace KeyValue
         #endregion
 
 
+        #region "private methods for readers/writers"
+        private void checkFileState(FileAccess Access, FileState state)
+        {
+            if (this.fh.State != state)
+                throw new Exception("KVCollection [" + Access.ToString() + "] Error. Operation is aborted, because of collection's state is [" + this.fh.State.ToString() + "].");
+        }
+
         #region "private methods for writing"
-        private void WriteBegin(Action fn)
+        private void WriterBegin(Action fn, bool CheckState = true)
         {
             this.cw?.WriteBegin((Action)(() =>
             {
+                if (CheckState) checkFileState(FileAccess.Write, FileState.Normal);
                 fn?.Invoke();
                 // file header is being updated...
                 this.cw.Write(this.fh.Pos, this.fh.ToArray(), 0);
             }));
         }
-        private IndexerInfo GetIndexerInfo<T>()
-        {
-            var retval = CollectionIndexer.Get<T>();
-            if (retval == null) throw new Exception("There is no collection index information for " + typeof(T).FullName + ".");
-            if (retval.index_value_getter_fns.Count == 0) throw new Exception("At least one index info must be specified by " + nameof(Indexer<T>.EnsureIndex) + " for " + typeof(T).FullName + ".");
-            return retval;
-        }
-        private RowHeader insert(byte[] Value, IEnumerable<object> IndexValues)
+        private RowHeader writer_insert(byte[] Value, IEnumerable<object> IndexValues)
         {
             var rh = new RowHeader();
             { // header of new record
@@ -383,22 +443,22 @@ namespace KeyValue
             }
 
             { // record is being written
-                io_write_row_header(rh);
-                io_write_row_value(rh, Value);
+                writer_set_row_header(rh);
+                writer_set_row_value(rh, Value);
             }
 
             return rh;
         }
-        private RowHeader update(RowHeader rh, byte[] Value, IEnumerable<object> IndexValues)
+        private RowHeader writer_update(RowHeader rh, byte[] Value, IEnumerable<object> IndexValues)
         {
             if (rh == null) throw new Exception("Update error. RowHeader must be specifed on update.");
 
             // if there is a next record and also new value is longer than old value,
             // then delete old record and insert as new.
-            if ((Value.Length > rh.ValueActualSize) && io_is_last(rh) == false)
+            if ((Value.Length > rh.ValueActualSize) && reader_is_lastRow(rh) == false)
             {
-                delete(rh);
-                return insert(Value, IndexValues);
+                writer_delete(rh.Pos);
+                return writer_insert(Value, IndexValues);
             }
             else
             {
@@ -421,39 +481,41 @@ namespace KeyValue
                 rh.ValueActualSize = Value.Length;
                 rh.IndexValues = IndexValues.ToArray();
                 { // record is being written
-                    io_write_row_header(rh);
-                    io_write_row_value(rh, Value);
+                    writer_set_row_header(rh);
+                    writer_set_row_value(rh, Value);
                 }
                 return rh;
             }
         }
-        private void delete(RowHeader rh)
+        private void writer_delete(long pos)
         {
-            if (rh == null) return;
-            rh.SetDeleted();
-            io_write_row_header(rh);
+            if (reader_posIsCorrect(pos) == false) return;
+
+            var rh = new RowHeader();
+            rh.Pos = pos;
+            writer_set_row_header(rh);
             this.fh.Count--;
         }
 
-        protected class multi_crud
+        protected class writer_multi_items
         {
-            public List<multi_crud_item> Items = new List<multi_crud_item>();
+            public List<writer_multi_item> Items = new List<writer_multi_item>();
 
             public void Add(byte[] Value, IEnumerable<object> IndexValues) =>
-                Items.Add(new multi_crud_item() { IsAdd = true, Value = Value, IndexValues = IndexValues });
+                Items.Add(new writer_multi_item() { IsAdd = true, Value = Value, IndexValues = IndexValues });
 
             public void Update(Predicate<RowHeader> match, byte[] Value, IEnumerable<object> IndexValues) =>
-                Items.Add(new multi_crud_item() { IsUpdate = true, match = match, Value = Value, IndexValues = IndexValues });
+                Items.Add(new writer_multi_item() { IsUpdate = true, match = match, Value = Value, IndexValues = IndexValues });
 
             public void Upsert(Predicate<RowHeader> match, byte[] Value, IEnumerable<object> IndexValues) =>
-                Items.Add(new multi_crud_item() { IsUpsert = true, match = match, Value = Value, IndexValues = IndexValues });
+                Items.Add(new writer_multi_item() { IsUpsert = true, match = match, Value = Value, IndexValues = IndexValues });
 
             public void Delete(Predicate<RowHeader> match) =>
-                Items.Add(new multi_crud_item() { IsDelete = true, match = match });
+                Items.Add(new writer_multi_item() { IsDelete = true, match = match });
 
             public bool HasExecutable => Items.Exists(x => x.IsExec == false);
         }
-        protected class multi_crud_item
+        protected class writer_multi_item
         {
             public bool IsAdd;
             public bool IsUpdate;
@@ -464,10 +526,10 @@ namespace KeyValue
             public IEnumerable<object> IndexValues;
             public bool IsExec;
         }
-        protected RowHeader multi_op(Action<multi_crud> fn)
+        protected RowHeader writer_multi(Action<writer_multi_items> fn)
         {
             RowHeader retval = null;
-            var mc = new multi_crud();
+            var mc = new writer_multi_items();
             fn(mc);
             if (mc.Items.Count == 0) return retval;
 
@@ -475,20 +537,21 @@ namespace KeyValue
             foreach (var item in mc.Items)
                 if (item.IsAdd)
                 {
-                    WriteBegin(() => retval = insert(item.Value, item.IndexValues));
+                    WriterBegin(() => retval = writer_insert(item.Value, item.IndexValues));
                     item.IsExec = true;
                 }
             if (mc.HasExecutable == false) return retval;
 
             // if there are items other than [ADD], then operates [UPDATE / UPSERT / DELETE] items.
-            foreach (var row in io_read_forward(FileHeader.Size, null, false))  // iterate all rows
+            foreach (var row in reader(reverse: false, FileHeader.Size, null, false))  // iterate all rows
                 foreach (var item in mc.Items)
                     if (item.IsExec == false && item.match(row.Key))            // check the row
                     {
                         if (item.IsUpdate || item.IsUpsert)
-                            WriteBegin(() => retval = update(row.Key, item.Value, item.IndexValues));
+                            WriterBegin(() => retval = writer_update(row.Key, item.Value, item.IndexValues));
                         else if (item.IsDelete)
-                            WriteBegin(() => delete(row.Key));
+                            WriterBegin(() => writer_delete(row.Key.Pos));
+                        //WriteBegin(() => delete(row.Key));
 
                         item.IsExec = true;
                         if (mc.HasExecutable == false) break;
@@ -498,118 +561,117 @@ namespace KeyValue
             // operates last [UPSERT] items not found.
             foreach (var item in mc.Items)
                 if (item.IsExec == false && item.IsUpsert)
-                    WriteBegin(() => retval = insert(item.Value, item.IndexValues));
+                    WriterBegin(() => retval = writer_insert(item.Value, item.IndexValues));
 
 
             return retval;
         }
 
-        internal void io_write_row_header(RowHeader rh) =>
-            this.cw.Write(rh.Pos, rh.ToArray(true), 0);
+        internal void writer_set_row_header(RowHeader rh) =>
+            this.cw.Write(rh.Pos, rh.ToArray(), 0);
 
-        internal void io_write_row_value(RowHeader rh, byte[] data) =>
+        internal void writer_set_row_value(RowHeader rh, byte[] data) =>
             this.cw.Write(rh.ValuePos, data, 1);
         #endregion
 
         #region "private methods for reading"
-        private bool io_is_last(RowHeader rh) => (rh.Pos + RowHeader.Size) == this.cw.fs_inx.Length;
-        private FileStream new_fs(string nam) => new FileStream(nam, FileMode.OpenOrCreate, FileAccess.Read, FileShare.ReadWrite, 4096 * 4, FileOptions.SequentialScan);
-        public IEnumerable<KeyValuePair<RowHeader, byte[]>> io_read_forward(
-            long StartPos = -1, Predicate<RowHeader> match = null, bool readValue = false)
+        private bool reader_is_lastRow(RowHeader rh) => (rh.Pos + RowHeader.Size) == this.cw.fs_inx.Length;
+        private FileStream reader_new_stream(string nam) => new FileStream(nam, FileMode.OpenOrCreate, FileAccess.Read, FileShare.ReadWrite, 4096 * 4, FileOptions.SequentialScan);
+        private IEnumerable<KeyValuePair<RowHeader, byte[]>> reader(
+             bool reverse, long StartPos = -1, Predicate<RowHeader> match = null, bool readValue = false, bool readDeleted = false, bool CheckState = true)
         {
+            if (CheckState) checkFileState(FileAccess.Read, FileState.Normal);
             if (IsOpen == false || this.fh.Count == 0) yield break;
-            if (StartPos == -1) StartPos = FileHeader.Size;
+            if (StartPos == -1) StartPos = reverse ? this.cw.fs_inx.Length : FileHeader.Size;
             if (StartPos < FileHeader.Size) yield break;
 
-            using (var fs_inx = new_fs(this.IndexFile))
-            using (var fs_dat = new_fs(this.DataFile))
+            using (var fs_inx = reader_new_stream(this.IndexFile))
+            using (var fs_dat = reader_new_stream(this.DataFile))
             {
                 // correction for the start position
-                StartPos = posCorrection(fs_inx, StartPos);
+                StartPos = reader_posCorrection(fs_inx, StartPos);
 
-                fs_inx.Position = StartPos;
+                foreach (var rh in reverse ? reader_backward(fs_inx, StartPos) : reader_forward(fs_inx, StartPos))
+                {
+                    if (CheckState) checkFileState(FileAccess.Read, FileState.Normal);
+                    // macted rows is being returned with its value -if it was requested-
+                    if ((readDeleted || rh.IsDeleted == false) &&
+                        (match == null || match(rh)))
+                        yield return KeyValuePair.Create(rh, readValue ? reader_getValue(fs_dat, rh) : null);
+
+                }
+            }
+        }
+        private IEnumerable<RowHeader> reader_forward(FileStream fs_inx, long StartPos = -1)
+        {
+            fs_inx.Position = StartPos;
+            var bufferLen = RowHeader.Size * 100;
+            var bytes = new byte[bufferLen];
+            while (true)
+            {
+                var lastIndex = fs_inx.Read(bytes);
+                if (lastIndex < RowHeader.Size) yield break;
+
+                var startIndex = 0;
+                while (startIndex < lastIndex)
+                {
+                    // row-header is being initialized from bytes read.
+                    yield return reader_toRowHeader(bytes, startIndex, StartPos);
+
+                    startIndex += RowHeader.Size;
+                    StartPos += RowHeader.Size;
+                }
+            }
+        }
+        private IEnumerable<RowHeader> reader_backward(FileStream fs_inx, long StartPos = -1)
+        {
+            while (StartPos > FileHeader.Size)
+            {
+                // correction for the start position
                 var bufferLen = RowHeader.Size * 100;
+                StartPos -= bufferLen;
+                if (StartPos < FileHeader.Size)
+                {
+                    bufferLen -= (FileHeader.Size - (int)StartPos);
+                    StartPos = FileHeader.Size;
+                }
+
+                // buffer bytes is being read from filestream
+                fs_inx.Position = StartPos;
                 var bytes = new byte[bufferLen];
-                while (true)
+                fs_inx.Read(bytes);
+
+                while (bufferLen > 0)
                 {
-                    var size = fs_inx.Read(bytes);
+                    bufferLen -= RowHeader.Size;
 
-                    if (size == 0) yield break;
-                    while (size > 0)
-                    {
-                        // row-header is being initialized from bytes read.
-                        var rh = toRowHeader(bytes, 0, StartPos);
-                        StartPos += RowHeader.Size;
-                        size -= RowHeader.Size;
-
-                        // macted rows is being returned with its value -if it was requested-
-                        if (rh is object && (match == null || match(rh)))
-                            yield return KeyValuePair.Create(rh, readValue ? getValueBytes(fs_dat, rh) : null);
-                    }
+                    // row-header is being initialized from bytes read.
+                    yield return reader_toRowHeader(bytes, bufferLen, StartPos + bufferLen);
                 }
             }
         }
-        public IEnumerable<KeyValuePair<RowHeader, byte[]>> io_read_backward(
-            long StartPos = -1, Predicate<RowHeader> match = null, bool readValue = false)
+
+        private bool reader_posIsCorrect(long pos) =>
+            pos == (long)(Math.Floor((decimal)(pos - FileHeader.Size) / RowHeader.Size) * RowHeader.Size) + FileHeader.Size;
+
+        private long reader_posCorrection(FileStream fs, long pos)
         {
-            if (IsOpen == false || this.fh.Count == 0) yield break;
-            if (StartPos == -1) StartPos = this.cw.fs_inx.Length;
-            if (StartPos <= FileHeader.Size) yield break;
+            if
+                (pos < FileHeader.Size) return FileHeader.Size;
+            else if
+                (pos > fs.Length) return fs.Length;
 
-            using (var fs_inx = new_fs(this.IndexFile))
-            using (var fs_dat = new_fs(this.DataFile))
-            {
-                // correction for the start position
-                StartPos = posCorrection(fs_inx, StartPos);
-                while (StartPos > FileHeader.Size)
-                {
-                    // correction for the start position
-                    var bufferLen = RowHeader.Size * 100;
-                    StartPos -= bufferLen;
-                    if (StartPos < FileHeader.Size)
-                    {
-                        bufferLen -= (FileHeader.Size - (int)StartPos);
-                        StartPos = FileHeader.Size;
-                    }
-
-                    // buffer bytes is being read from filestream
-                    fs_inx.Position = StartPos;
-                    var bytes = new byte[bufferLen];
-                    fs_inx.Read(bytes);
-
-                    while (bufferLen > 0)
-                    {
-                        bufferLen -= RowHeader.Size;
-
-                        // row-header is being initialized from bytes read.
-                        var rh = toRowHeader(bytes, bufferLen, StartPos + bufferLen);
-
-                        // macted rows is being returned with its value -if it was requested-
-                        if (rh is object && (match == null || match(rh)))
-                            yield return KeyValuePair.Create(rh, readValue ? getValueBytes(fs_dat, rh) : null);
-
-                    }
-                }
-            }
-        }
-        private long posCorrection(FileStream fs, long pos)
-        {
-            pos = (long)(Math.Floor((decimal)pos / RowHeader.Size) * RowHeader.Size) + FileHeader.Size;
-            if (pos < FileHeader.Size) pos = FileHeader.Size;
-            if (pos > fs.Length) pos = fs.Length;
-            return pos;
+            return (long)(Math.Floor((decimal)(pos - FileHeader.Size) / RowHeader.Size) * RowHeader.Size) + FileHeader.Size;
         }
 
-        private RowHeader toRowHeader(byte[] bytes, int start, long pos)
+        private RowHeader reader_toRowHeader(byte[] bytes, int start, long pos)
         {
             var rh = new RowHeader();
             rh.FromArray(bytes, start);
             rh.Pos = pos;
-            if (rh.IsDeleted) return default;
-
             return rh;
         }
-        private byte[] getValueBytes(FileStream fs, RowHeader rh)
+        private byte[] reader_getValue(FileStream fs, RowHeader rh)
         {
             if (fs.Position != rh.ValuePos)
                 fs.Position = rh.ValuePos;
@@ -618,6 +680,7 @@ namespace KeyValue
             fs.Read(bytes);
             return bytes;
         }
+        #endregion
         #endregion
     }
 }
