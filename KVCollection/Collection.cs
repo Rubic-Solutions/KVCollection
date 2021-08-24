@@ -328,31 +328,49 @@ namespace KeyValue
         }
 
         #region "GetByIndex"
+        /// <summary>retreives the item by searching on indexValues.</summary>
+        public KeyValuePair<RowHeader, byte[]> GetRaw(Predicate<object[]> match, bool Reverse = false) =>
+            match == null ? default : reader(reverse: Reverse, match: rh => match(rh.IndexValues), readValue: true).FirstOrDefault();
+
+        /// <summary>retreives the item by searching on indexValues.</summary>
+        public KeyValuePair<RowHeader, T> Get<T>(Predicate<object[]> match, bool Reverse = false) =>
+            toType<T>(GetRaw(match, Reverse));
+        #endregion
+
+        #region "GetByIndex"
         /// <summary>retreives the item by the first IndexValue.</summary>
         /// <param name="FirstIndexValue">is the first IndexValue to be searched.</param>
-        public KeyValuePair<RowHeader, byte[]> GetRawByIndex(object FirstIndexValue) => FirstIndexValue==null ? default : reader(reverse: false, FileHeader.Size, rh => rh.IndexValues[0].Equals(FirstIndexValue), true).FirstOrDefault();
+        public KeyValuePair<RowHeader, byte[]> GetRawByIndex(object FirstIndexValue, bool Reverse = false) =>
+            FirstIndexValue == null ? default : reader(reverse: Reverse, match: rh => rh.IndexValues[0].Equals(FirstIndexValue), readValue: true).FirstOrDefault();
+
         /// <summary>retreives the item by the first IndexValue.</summary>
         /// <param name="FirstIndexValue">is the first IndexValue to be searched.</param>
-        public KeyValuePair<RowHeader, T> GetByIndex<T>(object FirstIndexValue) => toType<T>(GetRawByIndex(FirstIndexValue));
+        public KeyValuePair<RowHeader, T> GetByIndex<T>(object FirstIndexValue, bool Reverse = false) =>
+            toType<T>(GetRawByIndex(FirstIndexValue, Reverse));
         #endregion
 
         #region "GetById"
-        public KeyValuePair<RowHeader, byte[]> GetRaw(int Id) => Id==0 ? default : reader(reverse: false, FileHeader.Size, rh => rh.Id == Id, true).FirstOrDefault();
-        public KeyValuePair<RowHeader, T> Get<T>(int Id) => toType<T>(GetRaw(Id));
+        /// <summary>retreives the item by Row-Id.</summary>
+        public KeyValuePair<RowHeader, byte[]> GetRaw(int Id, bool Reverse = false) =>
+            Id == 0 ? default : reader(reverse: Reverse, match: rh => rh.Id == Id, readValue: true).FirstOrDefault();
+        /// <summary>retreives the item by Row-Id.</summary>
+        public KeyValuePair<RowHeader, T> Get<T>(int Id, bool Reverse = false) => toType<T>(GetRaw(Id, Reverse));
         #endregion
 
         #region "GetByPos"
         /// <summary>retreives the item by the position of the item.</summary>
         /// <param name="Pos">is the position of the item.</param>
-        public KeyValuePair<RowHeader, byte[]> GetRawByPos(long Pos) => Pos == 0 ? default : reader(reverse: false, Pos, null, true).FirstOrDefault();
+        public KeyValuePair<RowHeader, byte[]> GetRawByPos(long Pos, bool Reverse = false) =>
+            Pos == 0 ? default : reader(reverse: Reverse, StartPos: Pos, readValue: true).FirstOrDefault();
         /// <summary>retreives the item by the position of the item.</summary>
         /// <param name="Pos">is the position of the item.</param>
-        public KeyValuePair<RowHeader, T> GetByPos<T>(long Pos) => toType<T>(GetRawByPos(Pos));
+        public KeyValuePair<RowHeader, T> GetByPos<T>(long Pos, bool Reverse = false) => toType<T>(GetRawByPos(Pos, Reverse));
         #endregion
 
         #region "GetByRowHeader"
-        public KeyValuePair<RowHeader, byte[]> GetRaw(RowHeader rowHeader) => GetRawByPos(rowHeader?.Pos ?? 0);
-        public KeyValuePair<RowHeader, T> Get<T>(RowHeader rowHeader) => GetByPos<T>(rowHeader?.Pos ?? 0);
+        public KeyValuePair<RowHeader, byte[]> GetRaw(RowHeader rowHeader, bool Reverse = false) =>
+            rowHeader == null ? default : GetRawByPos(rowHeader.Pos, Reverse);
+        public KeyValuePair<RowHeader, T> Get<T>(RowHeader rowHeader, bool Reverse = false) => toType<T>(GetRaw(rowHeader, Reverse));
         #endregion
 
         #region "GetFirst"
@@ -393,7 +411,7 @@ namespace KeyValue
         /// <summary>Retrieves all the elements by searching on indexValues.</summary>
         public IEnumerable<KeyValuePair<RowHeader, byte[]>> GetRawAll(Predicate<object[]> match, bool Reverse = false) =>
             from x
-            in reader(reverse: Reverse ,match: rh => match(rh.IndexValues), readValue: true) 
+            in reader(reverse: Reverse, match: rh => match(rh.IndexValues), readValue: true)
             select x;
 
         /// <summary>Retrieves all the elements by searching on indexValues.</summary>
@@ -652,7 +670,7 @@ namespace KeyValue
         }
 
         private bool reader_posIsCorrect(long pos) =>
-            pos == (long)(Math.Floor((decimal)(pos - FileHeader.Size) / RowHeader.Size) * RowHeader.Size) + FileHeader.Size;
+            ((pos - FileHeader.Size) % RowHeader.Size) == 0;
 
         private long reader_posCorrection(FileStream fs, long pos)
         {
