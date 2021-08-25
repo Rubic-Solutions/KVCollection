@@ -35,7 +35,21 @@ namespace KeyValue
         public Indexer(IndexerInfo indexerInfo) =>
             this.indexerInfo = indexerInfo;
 
-        public Indexer<T> EnsureIndex<K>(Expression<Func<T, K>> fn)
+        public Indexer<T> EnsureIndex(Expression<Func<T, string>> fn) => EnsureIndex(fn);
+        public Indexer<T> EnsureIndex(Expression<Func<T, bool>> fn) => EnsureIndex(fn);
+        public Indexer<T> EnsureIndex(Expression<Func<T, Int16>> fn) => EnsureIndex(fn);
+        public Indexer<T> EnsureIndex(Expression<Func<T, UInt16>> fn) => EnsureIndex(fn);
+        public Indexer<T> EnsureIndex(Expression<Func<T, Int32>> fn) => EnsureIndex(fn);
+        public Indexer<T> EnsureIndex(Expression<Func<T, UInt32>> fn) => EnsureIndex(fn);
+        public Indexer<T> EnsureIndex(Expression<Func<T, Int64>> fn) => EnsureIndex(fn);
+        public Indexer<T> EnsureIndex(Expression<Func<T, UInt64>> fn) => EnsureIndex(fn);
+        public Indexer<T> EnsureIndex(Expression<Func<T, Single>> fn) => EnsureIndex(fn);
+        public Indexer<T> EnsureIndex(Expression<Func<T, double>> fn) => EnsureIndex(fn);
+        public Indexer<T> EnsureIndex(Expression<Func<T, decimal>> fn) => EnsureIndex(fn);
+        public Indexer<T> EnsureIndex(Expression<Func<T, DateTime>> fn) => EnsureIndex(fn);
+        public Indexer<T> EnsureIndex(Expression<Func<T, byte[]>> fn) => EnsureIndex(fn);
+
+        private Indexer<T> EnsureIndex<K>(Expression<Func<T, K>> fn)
         {
             //if (fn.NodeType != ExpressionType.Lambda)
             //    throw new Exception("Only one [field] or [property], is allowed to be specified.");
@@ -51,7 +65,7 @@ namespace KeyValue
             //    throw new Exception("Only [fields] or [properties] in type of <T>, is allowed to be specified.");
 
             var fnc = fn.Compile();
-            this.indexerInfo.index_value_getter_fns.Add((o) => fnc((T)o));
+            this.indexerInfo.index_value_getter_fns.Add((o) => fnc((T)o) ?? throw new Exception(nameof(EnsureIndex) + " return value cannot be NULL."));
 
             return this;
         }

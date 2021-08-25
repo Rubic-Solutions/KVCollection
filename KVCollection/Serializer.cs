@@ -52,27 +52,28 @@ namespace KeyValue
             void addBytes(byte typ, byte[] val)
             {
                 byte len = (byte)val.Length;
+                retval.Add(typ);
+                pos++;
+                //if (typ == 1)   // only for string
+                //{
+                retval.Add(len);
+                pos++;
+                //}
                 if (len > 0)
                 {
-                    retval.Add(typ);
-                    pos++;
-                    //if (typ == 1)   // only for string
-                    //{
-                    retval.Add(len);
-                    pos++;
-                    //}
                     for (int i = 0; i < len; i++)
                         retval.Add(val[i]);
 
                     pos += len;
                 }
-
             }
             var enc = System.Text.Encoding.UTF8;
             foreach (var item in vals)
             {
                 Type t = item.GetType();
-                if (t == typeof(string))
+                if (item == null)
+                    addBytes(0, new byte[0]); // 0 => null
+                else if (t == typeof(string))
                     addBytes(1, enc.GetBytes((string)item));
                 else if (t == typeof(bool))
                     addBytes(2, BitConverter.GetBytes((bool)item));
@@ -114,40 +115,46 @@ namespace KeyValue
 
                 startIndex++;
                 var len = bytes[startIndex];
-                if (len == 0) break;
 
                 startIndex++;
+                if (typ == 0)
+                    yield return null;
                 if (typ == 1)
-                    yield return enc.GetString(bytes, startIndex, len);
+                    yield return len == 0 ? string.Empty : enc.GetString(bytes, startIndex, len);
                 else if (typ == 2)
-                    yield return BitConverter.ToBoolean(bytes, startIndex);
-                else if(typ == 3)
-                    yield return BitConverter.ToInt16(bytes, startIndex);
+                    yield return len == 0 ? default(bool) : BitConverter.ToBoolean(bytes, startIndex);
+                else if (typ == 3)
+                    yield return len == 0 ? default(Int16) : BitConverter.ToInt16(bytes, startIndex);
                 else if (typ == 4)
-                    yield return BitConverter.ToUInt16(bytes, startIndex);
+                    yield return len == 0 ? default(UInt16) : BitConverter.ToUInt16(bytes, startIndex);
                 else if (typ == 5)
-                    yield return BitConverter.ToInt32(bytes, startIndex);
+                    yield return len == 0 ? default(Int32) : BitConverter.ToInt32(bytes, startIndex);
                 else if (typ == 6)
-                    yield return BitConverter.ToUInt32(bytes, startIndex);
+                    yield return len == 0 ? default(UInt32) : BitConverter.ToUInt32(bytes, startIndex);
                 else if (typ == 7)
-                    yield return BitConverter.ToInt64(bytes, startIndex);
+                    yield return len == 0 ? default(Int64) : BitConverter.ToInt64(bytes, startIndex);
                 else if (typ == 8)
-                    yield return BitConverter.ToUInt64(bytes, startIndex);
+                    yield return len == 0 ? default(UInt64) : BitConverter.ToUInt64(bytes, startIndex);
                 else if (typ == 9)
-                    yield return BitConverter.ToSingle(bytes, startIndex);
+                    yield return len == 0 ? default(Single) : BitConverter.ToSingle(bytes, startIndex);
                 else if (typ == 10)
-                    yield return BitConverter.ToDouble(bytes, startIndex);
+                    yield return len == 0 ? default(double) : BitConverter.ToDouble(bytes, startIndex);
                 else if (typ == 11)
-                    yield return getDecimalValue(bytes, startIndex);
+                    yield return len == 0 ? default(decimal) : getDecimalValue(bytes, startIndex);
                 else if (typ == 12)
-                    yield return new DateTime(BitConverter.ToInt64(bytes, startIndex));
+                    yield return len == 0 ? default(DateTime) : new DateTime(BitConverter.ToInt64(bytes, startIndex));
                 else if (typ == 13)
                 {
-                    var retval = new byte[len];
-                    System.Buffer.BlockCopy(bytes, startIndex, retval, 0, len);
-                    yield return retval;
+                    if (len == 0)
+                        yield return default(byte[]);
+                    else
+                    {
+                        var retval = new byte[len];
+                        System.Buffer.BlockCopy(bytes, startIndex, retval, 0, len);
+                        yield return retval;
+                    }
                 }
-                startIndex += len;  
+                startIndex += len;
             }
         }
 
