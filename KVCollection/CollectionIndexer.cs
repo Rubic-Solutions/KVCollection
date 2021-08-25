@@ -35,21 +35,21 @@ namespace KeyValue
         public Indexer(IndexerInfo indexerInfo) =>
             this.indexerInfo = indexerInfo;
 
-        public Indexer<T> EnsureIndex(Expression<Func<T, string>> fn) => EnsureIndex(fn);
-        public Indexer<T> EnsureIndex(Expression<Func<T, bool>> fn) => EnsureIndex(fn);
-        public Indexer<T> EnsureIndex(Expression<Func<T, Int16>> fn) => EnsureIndex(fn);
-        public Indexer<T> EnsureIndex(Expression<Func<T, UInt16>> fn) => EnsureIndex(fn);
-        public Indexer<T> EnsureIndex(Expression<Func<T, Int32>> fn) => EnsureIndex(fn);
-        public Indexer<T> EnsureIndex(Expression<Func<T, UInt32>> fn) => EnsureIndex(fn);
-        public Indexer<T> EnsureIndex(Expression<Func<T, Int64>> fn) => EnsureIndex(fn);
-        public Indexer<T> EnsureIndex(Expression<Func<T, UInt64>> fn) => EnsureIndex(fn);
-        public Indexer<T> EnsureIndex(Expression<Func<T, Single>> fn) => EnsureIndex(fn);
-        public Indexer<T> EnsureIndex(Expression<Func<T, double>> fn) => EnsureIndex(fn);
-        public Indexer<T> EnsureIndex(Expression<Func<T, decimal>> fn) => EnsureIndex(fn);
-        public Indexer<T> EnsureIndex(Expression<Func<T, DateTime>> fn) => EnsureIndex(fn);
-        public Indexer<T> EnsureIndex(Expression<Func<T, byte[]>> fn) => EnsureIndex(fn);
+        public Indexer<T> EnsureIndex(Expression<Func<T, string>> fn) => ensureIndex(fn);
+        public Indexer<T> EnsureIndex(Expression<Func<T, bool>> fn) => ensureIndex(fn);
+        public Indexer<T> EnsureIndex(Expression<Func<T, Int16>> fn) => ensureIndex(fn);
+        public Indexer<T> EnsureIndex(Expression<Func<T, UInt16>> fn) => ensureIndex(fn);
+        public Indexer<T> EnsureIndex(Expression<Func<T, Int32>> fn) => ensureIndex(fn);
+        public Indexer<T> EnsureIndex(Expression<Func<T, UInt32>> fn) => ensureIndex(fn);
+        public Indexer<T> EnsureIndex(Expression<Func<T, Int64>> fn) => ensureIndex(fn);
+        public Indexer<T> EnsureIndex(Expression<Func<T, UInt64>> fn) => ensureIndex(fn);
+        public Indexer<T> EnsureIndex(Expression<Func<T, Single>> fn) => ensureIndex(fn);
+        public Indexer<T> EnsureIndex(Expression<Func<T, double>> fn) => ensureIndex(fn);
+        public Indexer<T> EnsureIndex(Expression<Func<T, decimal>> fn) => ensureIndex(fn);
+        public Indexer<T> EnsureIndex(Expression<Func<T, DateTime>> fn) => ensureIndex(fn);
+        public Indexer<T> EnsureIndex(Expression<Func<T, byte[]>> fn) => ensureIndex(fn);
 
-        private Indexer<T> EnsureIndex<K>(Expression<Func<T, K>> fn)
+        private Indexer<T> ensureIndex<K>(Expression<Func<T, K>> fn)
         {
             //if (fn.NodeType != ExpressionType.Lambda)
             //    throw new Exception("Only one [field] or [property], is allowed to be specified.");
