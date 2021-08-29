@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace KeyValue
+namespace KV
 {
     internal enum FileState
     {

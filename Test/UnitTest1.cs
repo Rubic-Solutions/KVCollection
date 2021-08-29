@@ -46,12 +46,12 @@ namespace Test
             static void fn(int number)
             {
                 var sw = new Stopwatch();
-                KeyValue.CollectionIndexer.Define<testModel>()
+                KV.CollectionIndexer.Define<testModel>()
                     .EnsureIndex(x => x.Id)
                     .EnsureIndex(x => x.IsAdult)
                     .EnsureIndex(x => x.BirtDate);
 
-                using (var kc = new KeyValue.Collection())
+                using (var kc = new KV.Collection())
                 {
                     sw.Restart();
                     kc.Open("\\", "test");
@@ -99,7 +99,7 @@ namespace Test
                 }
             }
 
-            using (var kc = new KeyValue.Collection())
+            using (var kc = new KV.Collection())
             {
                 kc.Open("\\", "test");
                 kc.Truncate();

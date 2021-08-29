@@ -16,7 +16,7 @@ namespace KVExplorer
     {
         private static string exe_path = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
-        private KeyValue.Collection kvFile = new KeyValue.Collection();
+        private KV.Collection kvFile = new KV.Collection();
 
 
         private readonly DataTable DGRID_LIST_SOURCE = new DataTable();
@@ -25,7 +25,7 @@ namespace KVExplorer
         {
             InitializeComponent();
 
-            KeyValue.CollectionIndexer.Define<testModel>()
+            KV.CollectionIndexer.Define<testModel>()
                 .EnsureIndex(x => x.Key)
                 .EnsureIndex(x => x.IsAdult)
                 .EnsureIndex(x => x.BirtDate);
@@ -78,7 +78,7 @@ namespace KVExplorer
             DGRID_LIST_SOURCE.Clear();
             SetItem(-1);
 
-            var items = new List<KeyValue.RowHeader>(1000);
+            var items = new List<KV.RowHeader>(1000);
             DoWorkResult result = null;
 
             items.Clear();
@@ -149,7 +149,7 @@ namespace KVExplorer
 
             result = await DoWork(() =>
                 {
-                    KeyValue.Row<object> item = default;
+                    KV.Row<object> item = default;
                     for (int i = 0; i < 100; i++)
                         item = kvFile.GetFirst<object>();
 
@@ -159,7 +159,7 @@ namespace KVExplorer
 
             result = await DoWork(() =>
                 {
-                    KeyValue.Row<object> item = default;
+                    KV.Row<object> item = default;
                     for (int i = 0; i < 100; i++)
                         item = kvFile.GetLast<object>();
 
@@ -229,7 +229,7 @@ namespace KVExplorer
 
             if (pos > 0)
             {
-                KeyValue.RowHeader head = null;
+                KV.RowHeader head = null;
                 string data = null;
                 var result = await DoWork(() =>
                 {
@@ -239,7 +239,7 @@ namespace KVExplorer
                 }, null);
 
                 if (head == null) return;
-                EDIT_KEY.Text = string.Join(", ", head);
+                EDIT_KEY.Text = string.Join(", ", head.IndexValues);
                 EDIT_VALUE.Text = data;
 
                 var txt = new List<string>();
@@ -305,7 +305,7 @@ namespace KVExplorer
             var dir = fi.DirectoryName;
             var nam = fi.Extension.Length > 0 ? fi.Name.Replace(fi.Extension, "") : fi.Name;
 
-            var kvFileTyped = new KeyValue.Collection();
+            var kvFileTyped = new KV.Collection();
             kvFileTyped.Open(dir, nam);
             DoWorkResult result = null;
 
@@ -318,7 +318,7 @@ namespace KVExplorer
 
             result = await DoWork(() =>
             {
-                for (int i = 0; i < 50000; i++)
+                for (int i = 0; i < 100000; i++)
                 {
                     var item = new testModel();
                     item.Key = "Key-" + i;

@@ -5,7 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 
-namespace KeyValue
+namespace KV
 {
     public class CollectionIndexer
     {

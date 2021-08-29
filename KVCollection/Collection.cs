@@ -4,13 +4,14 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
-namespace KeyValue
+namespace KV
 {
     public class Collection : IDisposable
     {
         [DebuggerBrowsable(DebuggerBrowsableState.Never)] private string dir;
         [DebuggerBrowsable(DebuggerBrowsableState.Never)] private string colName;
         [DebuggerBrowsable(DebuggerBrowsableState.Never)] private string name;
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal CollectionReader reader = null;
 
         [DebuggerBrowsable(DebuggerBrowsableState.Never)] internal static object lock_ctor = new object();
 
@@ -50,6 +51,7 @@ namespace KeyValue
             this.dir = Directory;
             this.colName = CollectionName;
             this.name = name;
+            this.reader = new CollectionReader(this);
 
             // index and data files are must be exist at same time.
             var fi_exists_inx = System.IO.File.Exists(this.IndexFile);
@@ -276,7 +278,7 @@ namespace KeyValue
                 var dat_pos = 0;
                 var last_id = -1;
                 bool has_deleted = false;
-                foreach (var item in reader<byte[]>(reverse: false, readValue: true, readDeleted: true, CheckState: false))
+                foreach (var item in this.reader.Create<byte[]>(reverse: false, readValue: true, readDeleted: true, CheckState: false))
                 {
 
                     // if the shrink operation aborted, is continued
@@ -326,13 +328,13 @@ namespace KeyValue
         /// <summary>retreives the item by the first IndexValue.</summary>
         /// <param name="FirstIndexValue">is the first IndexValue to be searched.</param>
         public Row<T> GetByIndex<T>(object FirstIndexValue, bool Reverse = false) =>
-            FirstIndexValue == null ? default : reader<T>(reverse: Reverse, match: rh => rh.IndexValues[0].Equals(FirstIndexValue), readValue: true).FirstOrDefault();
+            FirstIndexValue == null ? default : this.reader.Create<T>(reverse: Reverse, match: rh => rh.IndexValues[0].Equals(FirstIndexValue), readValue: true).FirstOrDefault();
         #endregion
 
         #region "GetById"
         /// <summary>retreives the item by Row-Id.</summary>
         public Row<T> Get<T>(int Id, bool Reverse = false) =>
-            Id == 0 ? default : reader<T>(reverse: Reverse, match: rh => rh.Id == Id, readValue: true).FirstOrDefault();
+            Id == 0 ? default : this.reader.Create<T>(reverse: Reverse, match: rh => rh.Id == Id, readValue: true).FirstOrDefault();
 
         /// <summary>retreives the item by RowHeader.</summary>
         public Row<T> Get<T>(RowHeader rowHeader, bool Reverse = false) =>
@@ -340,14 +342,14 @@ namespace KeyValue
 
         /// <summary>retreives the item by searching on indexValues.</summary>
         public Row<T> Get<T>(Predicate<object[]> match, bool Reverse = false) =>
-            match == null ? default : reader<T>(reverse: Reverse, match: rh => match(rh.IndexValues), readValue: true).FirstOrDefault();
+            match == null ? default : this.reader.Create<T>(reverse: Reverse, match: rh => match(rh.IndexValues), readValue: true).FirstOrDefault();
         #endregion
 
         #region "GetByPos"
         /// <summary>retreives the item by the position of the item.</summary>
         /// <param name="Pos">is the position of the item.</param>
         public Row<T> GetByPos<T>(long Pos, bool Reverse = false) =>
-            Pos == 0 ? default : reader<T>(reverse: Reverse, StartPos: Pos, readValue: true).FirstOrDefault();
+            Pos == 0 ? default : this.reader.Create<T>(reverse: Reverse, StartPos: Pos, readValue: true).FirstOrDefault();
         #endregion
 
 
@@ -358,15 +360,15 @@ namespace KeyValue
         #region "GetAll"
         /// <summary>Retrieves all the elements.</summary>
         public IEnumerable<Row<T>> GetAll<T>(bool Reverse = false) =>
-            reader<T>(reverse: Reverse, readValue: true);
+            this.reader.Create<T>(reverse: Reverse, readValue: true);
 
         /// <summary>Retrieves all the elements by searching on indexValues.</summary>
         public IEnumerable<Row<T>> GetAll<T>(Predicate<object[]> match, bool Reverse = false) =>
-            reader<T>(reverse: Reverse, readValue: true, match: rh => match(rh.IndexValues));
+            this.reader.Create<T>(reverse: Reverse, readValue: true, match: rh => match(rh.IndexValues));
         #endregion
 
         #region "GetHeader(s)"
-        public IEnumerable<RowHeader> GetHeaders(bool Reverse = false) => from x in reader<object>(reverse: Reverse) select x.Header;
+        public IEnumerable<RowHeader> GetHeaders(bool Reverse = false) => from x in this.reader.Create<object>(reverse: Reverse) select x.Header;
 
         public RowHeader GetHeader(int Id) => GetHeaders().FirstOrDefault(row => row.Id == Id);
         public RowHeader GetHeaderByPos(long Pos) => GetHeaders().FirstOrDefault(row => row.Pos == Pos);
@@ -374,11 +376,6 @@ namespace KeyValue
         #endregion
 
         #region "Exists"
-        public bool Exists<T>(T Item)
-        {
-            var inx_info = GetIndexerInfo<T>();
-            return ExistsByKey(inx_info.CreateValues(Item).FirstOrDefault());
-        }
         public bool Exists(int Id) => GetHeader(Id) is object;
         public bool ExistsByPos(long Pos) => GetHeaderByPos(Pos) is object;
         public bool ExistsByKey(object FirstIndexValue) => GetHeaderByIndex(FirstIndexValue) is object;
@@ -389,11 +386,16 @@ namespace KeyValue
 
 
         #region "private methods for readers/writers"
-        private void checkFileState(FileAccess Access, FileState state)
+        internal void checkFileState(FileAccess Access, FileState state)
         {
             if (this.fh.State != state)
                 throw new Exception("KVCollection [" + Access.ToString() + "] Error. Operation is aborted, because of collection's state is [" + this.fh.State.ToString() + "].");
         }
+        internal bool isLastRow(RowHeader rh) => (rh.Pos + RowHeader.Size) == this.cw.fs_inx.Length;
+
+        internal bool isPosCorrect(long pos) =>
+            ((pos - FileHeader.Size) % RowHeader.Size) == 0;
+        #endregion
 
         #region "private methods for writing"
         private void WriterBegin(Action fn, bool CheckState = true)
@@ -436,7 +438,7 @@ namespace KeyValue
 
             // if there is a next record and also new value is longer than old value,
             // then delete old record and insert as new.
-            if ((Value.Length > rh.ValueActualSize) && reader_is_lastRow(rh) == false)
+            if ((Value.Length > rh.ValueActualSize) && isLastRow(rh) == false)
             {
                 writer_delete(rh.Pos);
                 return writer_insert(Value, IndexValues);
@@ -470,7 +472,7 @@ namespace KeyValue
         }
         private void writer_delete(long pos)
         {
-            if (reader_posIsCorrect(pos) == false) return;
+            if (isPosCorrect(pos) == false) return;
 
             var rh = new RowHeader();
             rh.Pos = pos;
@@ -524,7 +526,7 @@ namespace KeyValue
             if (mc.HasExecutable == false) return retval;
 
             // if there are items other than [ADD], then operates [UPDATE / UPSERT / DELETE] items.
-            foreach (var row in reader<object>(reverse: false, FileHeader.Size, null, false))  // iterate all rows
+            foreach (var row in this.reader.Create<object>(reverse: false, FileHeader.Size, null, false))  // iterate all rows
                 foreach (var item in mc.Items)
                     if (item.IsExec == false && item.match(row.Header))            // check the row
                     {
@@ -553,132 +555,6 @@ namespace KeyValue
 
         internal void writer_set_row_value(RowHeader rh, byte[] data) =>
             this.cw.Write(rh.ValuePos, data, 1);
-        #endregion
-
-        #region "private methods for reading"
-        private bool reader_is_lastRow(RowHeader rh) => (rh.Pos + RowHeader.Size) == this.cw.fs_inx.Length;
-        private FileStream reader_new_stream(string nam) => new FileStream(nam, FileMode.OpenOrCreate, FileAccess.Read, FileShare.ReadWrite, 4096 * 4, FileOptions.SequentialScan);
-        private IEnumerable<Row<T>> reader<T>(
-             bool reverse, long StartPos = -1, Predicate<RowHeader> match = null,
-             bool readValue = false, bool readDeleted = false, bool CheckState = true)
-        {
-            if (CheckState) checkFileState(FileAccess.Read, FileState.Normal);
-            if (IsOpen == false || this.fh.Count == 0) yield break;
-            if (StartPos == -1) StartPos = reverse ? this.cw.fs_inx.Length : FileHeader.Size;
-            if (StartPos < FileHeader.Size) yield break;
-
-            using (var fs_inx = reader_new_stream(this.IndexFile))
-            using (var fs_dat = reader_new_stream(this.DataFile))
-            {
-                // correction for the start position
-                StartPos = reader_posCorrection(fs_inx, StartPos);
-
-                foreach (var rh in reverse ? reader_backward(fs_inx, StartPos) : reader_forward(fs_inx, StartPos))
-                {
-                    if (CheckState) checkFileState(FileAccess.Read, FileState.Normal);
-                    // macted rows is being returned with its value -if it was requested-
-                    if ((readDeleted || rh.IsDeleted == false) &&
-                        (match == null || match(rh)))
-                    {
-                        var retval = new Row<T>() { Header = rh };
-                        if (readValue)
-                            if (typeof(T) == typeof(byte[]) || typeof(T) == typeof(object))
-                                retval.Data = (T)(object)reader_getValue(fs_dat, rh);
-                            else
-                                retval.Data = reader_getValue<T>(fs_dat, rh);
-                        yield return retval;
-                    }
-                }
-            }
-        }
-
-        private IEnumerable<RowHeader> reader_forward(FileStream fs_inx, long StartPos = -1)
-        {
-            fs_inx.Position = StartPos;
-            var bufferLen = RowHeader.Size * 100;
-            var bytes = new byte[bufferLen];
-            while (true)
-            {
-                var lastIndex = fs_inx.Read(bytes, 0, bufferLen);
-                if (lastIndex < RowHeader.Size) yield break;
-
-                var startIndex = 0;
-                while (startIndex < lastIndex)
-                {
-                    // row-header is being initialized from bytes read.
-                    yield return reader_toRowHeader(bytes, startIndex, StartPos);
-
-                    startIndex += RowHeader.Size;
-                    StartPos += RowHeader.Size;
-                }
-            }
-        }
-        private IEnumerable<RowHeader> reader_backward(FileStream fs_inx, long StartPos = -1)
-        {
-            while (StartPos > FileHeader.Size)
-            {
-                // correction for the start position
-                var bufferLen = RowHeader.Size * 100;
-                StartPos -= bufferLen;
-                if (StartPos < FileHeader.Size)
-                {
-                    bufferLen -= (FileHeader.Size - (int)StartPos);
-                    StartPos = FileHeader.Size;
-                }
-
-                // buffer bytes is being read from filestream
-                fs_inx.Position = StartPos;
-                var bytes = new byte[bufferLen];
-                fs_inx.Read(bytes);
-
-                while (bufferLen > 0)
-                {
-                    bufferLen -= RowHeader.Size;
-
-                    // row-header is being initialized from bytes read.
-                    yield return reader_toRowHeader(bytes, bufferLen, StartPos + bufferLen);
-                }
-            }
-        }
-
-        private bool reader_posIsCorrect(long pos) =>
-            ((pos - FileHeader.Size) % RowHeader.Size) == 0;
-
-        private long reader_posCorrection(FileStream fs, long pos)
-        {
-            if
-                (pos < FileHeader.Size) return FileHeader.Size;
-            else if
-                (pos > fs.Length) return fs.Length;
-
-            return (long)(Math.Floor((decimal)(pos - FileHeader.Size) / RowHeader.Size) * RowHeader.Size) + FileHeader.Size;
-        }
-
-        private RowHeader reader_toRowHeader(byte[] bytes, int start, long pos)
-        {
-            var rh = new RowHeader();
-            rh.FromArray(bytes, start);
-            rh.Pos = pos;
-            return rh;
-        }
-        private byte[] reader_getValue(FileStream fs, RowHeader rh)
-        {
-            if (fs.Position != rh.ValuePos) fs.Position = rh.ValuePos;
-
-            var bytes = new byte[rh.ValueActualSize];
-            fs.Read(bytes);
-            return bytes;
-        }
-        private T reader_getValue<T>(FileStream fs, RowHeader rh)
-        {
-            if (fs.Position != rh.ValuePos) fs.Position = rh.ValuePos;
-
-            var bytes = new byte[rh.ValueActualSize];
-            fs.Read(bytes, 0, rh.ValueActualSize);
-            var retval = Serializer.GetObject<T>(bytes);
-            return retval;
-        }
-        #endregion
         #endregion
     }
 }

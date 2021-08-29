@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text.Json;
 
-namespace KeyValue
+namespace KV
 {
     public static class Serializer
     {
@@ -25,6 +25,7 @@ namespace KeyValue
         //public static string GetString(byte[] bytes, int index, int count) => (bytes == null || bytes.Length == 0) ? default : enc.GetString(bytes, index, count);
 
         public static T GetObject<T>(byte[] bytes) => JsonSerializer.Deserialize<T>(bytes, serialize_opt);
+        public static T GetObject<T>(Span<byte> bytes) => JsonSerializer.Deserialize<T>(bytes, serialize_opt);
         //internal static T GetObject<T>(byte[] bytes, int index, int count) => (bytes == null || bytes.Length == 0) ? default : JsonSerializer.Deserialize<T>(bytes, serialize_opt));
 
         public static string ToJson(object obj) => JsonSerializer.Serialize(obj, serialize_opt);

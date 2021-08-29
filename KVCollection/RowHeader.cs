@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
 
-namespace KeyValue
+namespace KV
 {
     public class Row<T>
     {
