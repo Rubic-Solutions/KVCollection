@@ -66,19 +66,28 @@ var items = kc.GetAll(indexValues => (bool)indexValues[1] && (DateTime)indexValu
 
 
 // Update an item
-kc.Update(item);
+kc.Update(item); // also there are different overloads
 
 
 // Delete an item
 kc.Delete(item);
+kc.DeleteMany( new []{ item1, item2 ... itemN } );
 
 
 // Insert or Update an item
-kc.Upsert(item);
+kc.Upsert(item); // also there are different overloads
+
+
+// Determining the row is exists or not
+kc.Exists(item); // also there are different overloads
 
 
 // Delete all items
 kc.Truncate();
+
+
+// Shrink Collection
+kc.Shrink();
 
 
 // Iteration all headers
@@ -89,10 +98,17 @@ foreach (var key in kc.GetHeaders())
 
 
 // Iteration all items
-foreach (var item in kc.GetAll())
+foreach (var item in kc.GetAll<T>())
 {
-    // item.Key
-    // item.Value
+    // item.Header
+    // item.Data
+}
+
+// Reverse Iteration all items
+foreach (var item in kc.GetAll<T>( Reverse: true ))
+{
+    // item.Header
+    // item.Data
 }
     
 

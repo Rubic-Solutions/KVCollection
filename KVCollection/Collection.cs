@@ -374,6 +374,11 @@ namespace KeyValue
         #endregion
 
         #region "Exists"
+        public bool Exists<T>(T Item)
+        {
+            var inx_info = GetIndexerInfo<T>();
+            return ExistsByKey(inx_info.CreateValues(Item).FirstOrDefault());
+        }
         public bool Exists(int Id) => GetHeader(Id) is object;
         public bool ExistsByPos(long Pos) => GetHeaderByPos(Pos) is object;
         public bool ExistsByKey(object FirstIndexValue) => GetHeaderByIndex(FirstIndexValue) is object;
