@@ -81,7 +81,6 @@ namespace KVExplorer
             var items = new List<KeyValue.RowHeader>(1000);
             DoWorkResult result = null;
 
-
             items.Clear();
             result = await DoWork(() =>
             {
@@ -132,7 +131,7 @@ namespace KVExplorer
             var dt = DateTime.Now.AddYears(-30);
             result = await DoWork(() =>
                 {
-                    foreach (var item in kvFile.GetRawAll(x => (bool)x[1] && (DateTime)x[2] > dt))
+                    foreach (var item in kvFile.GetAll<object>(x => (bool)x[1] && (DateTime)x[2] > dt))
                     {
                         var i = item;
                         adult_count++;
@@ -140,32 +139,32 @@ namespace KVExplorer
                 }, "FindAll predicate search.");
             MessageAdd("\tTotal " + adult_count + " adult(s) found.");
 
-            var lastItem = kvFile.GetRawLast();
+            var lastItem = kvFile.GetLast<object>();
             result = await DoWork(() =>
                 {
-                    var item = kvFile.GetRaw(lastItem.Key?.Id ?? 0);
-                    if (item.Key is object)
-                        MessageAdd("\tKey = " + item.Key.Id);
+                    var item = kvFile.Get<object>(lastItem.Header?.Id ?? 0);
+                    if (item.Header is object)
+                        MessageAdd("\tKey = " + item.Header.Id);
                 }, "ID FIND search.");
 
             result = await DoWork(() =>
                 {
-                    KeyValuePair<KeyValue.RowHeader, byte[]> item = default;
+                    KeyValue.Row<object> item = default;
                     for (int i = 0; i < 100; i++)
-                        item = kvFile.GetRawFirst();
+                        item = kvFile.GetFirst<object>();
 
-                    if (item.Key is object)
-                        MessageAdd("\tKey = " + (item.Key?.Id.ToString() ?? ""));
+                    if (item.Header is object)
+                        MessageAdd("\tKey = " + (item.Header?.Id.ToString() ?? ""));
                 }, "Get First Record 100 times.");
 
             result = await DoWork(() =>
                 {
-                    KeyValuePair<KeyValue.RowHeader, byte[]> item = default;
+                    KeyValue.Row<object> item = default;
                     for (int i = 0; i < 100; i++)
-                        item = kvFile.GetRawLast();
+                        item = kvFile.GetLast<object>();
 
-                    if (item.Key is object)
-                        MessageAdd("\tKey = " + (item.Key?.Id.ToString() ?? ""));
+                    if (item.Header is object)
+                        MessageAdd("\tKey = " + (item.Header?.Id.ToString() ?? ""));
                 }, "Get Last Record 100 times.");
 
             return result.Success;
@@ -234,9 +233,9 @@ namespace KVExplorer
                 string data = null;
                 var result = await DoWork(() =>
                 {
-                    var row = kvFile.GetRawByPos(EDIT_POS);
-                    head = row.Key;
-                    data = row.Value == null ? null : System.Text.Encoding.UTF8.GetString(row.Value);
+                    var row = kvFile.GetByPos<byte[]>(EDIT_POS);
+                    head = row.Header;
+                    data = row.Data == null ? null : System.Text.Encoding.UTF8.GetString(row.Data);
                 }, null);
 
                 if (head == null) return;

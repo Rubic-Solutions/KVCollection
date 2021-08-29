@@ -21,11 +21,11 @@ namespace KeyValue
         public static byte[] GetBytes(string obj) => enc.GetBytes(obj);
         public static byte[] GetBytes<K>(K obj) => enc.GetBytes(ToJson(obj));
 
-        public static string GetString(byte[] bytes) => GetString(bytes, 0, bytes.Length);
-        public static string GetString(byte[] bytes, int index, int count) => (bytes == null || bytes.Length == 0) ? default : enc.GetString(bytes, index, count);
+        //public static string GetString(byte[] bytes) => GetString(bytes, 0, bytes.Length);
+        //public static string GetString(byte[] bytes, int index, int count) => (bytes == null || bytes.Length == 0) ? default : enc.GetString(bytes, index, count);
 
-        public static T GetObject<T>(byte[] bytes) => GetObject<T>(bytes, 0, bytes.Length);
-        internal static T GetObject<T>(byte[] bytes, int index, int count) => (bytes == null || bytes.Length == 0) ? default : FromJson<T>(enc.GetString(bytes, index, count));
+        public static T GetObject<T>(byte[] bytes) => JsonSerializer.Deserialize<T>(bytes, serialize_opt);
+        //internal static T GetObject<T>(byte[] bytes, int index, int count) => (bytes == null || bytes.Length == 0) ? default : JsonSerializer.Deserialize<T>(bytes, serialize_opt));
 
         public static string ToJson(object obj) => JsonSerializer.Serialize(obj, serialize_opt);
         public static T FromJson<T>(string data) => JsonSerializer.Deserialize<T>(data, serialize_opt);
@@ -102,6 +102,7 @@ namespace KeyValue
             }
             return retval.ToArray();
         }
+
         public static IEnumerable<object> GetObjects(byte[] bytes, int startIndex = 0, int count = -1)
         {
             var enc = System.Text.Encoding.UTF8;
@@ -175,6 +176,5 @@ namespace KeyValue
 
             return new decimal(bits);
         }
-
     }
 }

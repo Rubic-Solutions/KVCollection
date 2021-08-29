@@ -4,8 +4,8 @@ namespace KeyValue
 {
     internal enum FileState
     {
-         Normal=0,
-         Shrink=1
+        Normal = 0,
+        Shrink = 1
     }
 
     internal class FileHeader
@@ -15,7 +15,7 @@ namespace KeyValue
         internal int Version => 2210729;    // 4 byte
         internal long Count;                // 8 byte
         internal int LastId;                // 4 byte
-        internal FileState State ;            // 4 byte (0:Normal, 1:Shrink, n:...)
+        internal FileState State;            // 4 byte (0:Normal, 1:Shrink, n:...)
         internal const int Size = 255;
 
         internal byte[] ToArray() =>
@@ -24,7 +24,7 @@ namespace KeyValue
                 BitConverter.GetBytes(Version),
                 BitConverter.GetBytes(Count),
                 BitConverter.GetBytes(LastId),
-                BitConverter.GetBytes((int)State ));
+                BitConverter.GetBytes((int)State));
 
         /// POS=0  ->   Len=30  
         /// 
@@ -46,7 +46,7 @@ namespace KeyValue
             // ...
             this.Count = BitConverter.ToInt64(data, 6);
             this.LastId = BitConverter.ToInt32(data, 14);
-            this.State  = (FileState)BitConverter.ToInt32(data, 18);
+            this.State = (FileState)BitConverter.ToInt32(data, 18);
             return true;
         }
     }

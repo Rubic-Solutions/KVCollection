@@ -276,15 +276,15 @@ namespace KeyValue
                 var dat_pos = 0;
                 var last_id = -1;
                 bool has_deleted = false;
-                foreach (var item in reader(reverse: false, readValue: true, readDeleted: true, CheckState: false))
+                foreach (var item in reader<byte[]>(reverse: false, readValue: true, readDeleted: true, CheckState: false))
                 {
 
                     // if the shrink operation aborted, is continued
                     // then the row with same ID can be iterate
-                    if (last_id == item.Key.Id) continue;
-                    last_id = item.Key.Id;
+                    if (last_id == item.Header.Id) continue;
+                    last_id = item.Header.Id;
 
-                    if (item.Key.IsDeleted)
+                    if (item.Header.IsDeleted)
                     {
                         has_deleted = true;
                         continue;
@@ -293,17 +293,17 @@ namespace KeyValue
                     if (has_deleted)
                         WriterBegin(() =>
                         {
-                            item.Key.Pos = inx_pos;
-                            item.Key.ValueSize = item.Value.Length;
-                            item.Key.ValueActualSize = item.Value.Length;
-                            item.Key.ValuePos = dat_pos;
+                            item.Header.Pos = inx_pos;
+                            item.Header.ValueSize = item.Data.Length;
+                            item.Header.ValueActualSize = item.Data.Length;
+                            item.Header.ValuePos = dat_pos;
 
-                            writer_set_row_header(item.Key);
-                            writer_set_row_value(item.Key, item.Value);
+                            writer_set_row_header(item.Header);
+                            writer_set_row_value(item.Header, item.Data);
                         }, CheckState: false);
 
                     inx_pos += RowHeader.Size;
-                    dat_pos += item.Value.Length;
+                    dat_pos += item.Data.Length;
                 }
                 this.cw.fs_inx.SetLength(inx_pos);
                 this.cw.fs_inx.Flush();
@@ -321,70 +321,52 @@ namespace KeyValue
         #endregion
 
         #region "GET Methods"
-        private KeyValuePair<RowHeader, T> toType<T>(KeyValuePair<RowHeader, byte[]> row)
-        {
-            if (row.Value == null) return default;
-            return KeyValuePair.Create(row.Key, Serializer.GetObject<T>(row.Value));
-        }
-
-        #region "GetByIndex"
-        /// <summary>retreives the item by searching on indexValues.</summary>
-        public KeyValuePair<RowHeader, byte[]> GetRaw(Predicate<object[]> match, bool Reverse = false) =>
-            match == null ? default : reader(reverse: Reverse, match: rh => match(rh.IndexValues), readValue: true).FirstOrDefault();
-
-        /// <summary>retreives the item by searching on indexValues.</summary>
-        public KeyValuePair<RowHeader, T> Get<T>(Predicate<object[]> match, bool Reverse = false) =>
-            toType<T>(GetRaw(match, Reverse));
-        #endregion
 
         #region "GetByIndex"
         /// <summary>retreives the item by the first IndexValue.</summary>
         /// <param name="FirstIndexValue">is the first IndexValue to be searched.</param>
-        public KeyValuePair<RowHeader, byte[]> GetRawByIndex(object FirstIndexValue, bool Reverse = false) =>
-            FirstIndexValue == null ? default : reader(reverse: Reverse, match: rh => rh.IndexValues[0].Equals(FirstIndexValue), readValue: true).FirstOrDefault();
-
-        /// <summary>retreives the item by the first IndexValue.</summary>
-        /// <param name="FirstIndexValue">is the first IndexValue to be searched.</param>
-        public KeyValuePair<RowHeader, T> GetByIndex<T>(object FirstIndexValue, bool Reverse = false) =>
-            toType<T>(GetRawByIndex(FirstIndexValue, Reverse));
+        public Row<T> GetByIndex<T>(object FirstIndexValue, bool Reverse = false) =>
+            FirstIndexValue == null ? default : reader<T>(reverse: Reverse, match: rh => rh.IndexValues[0].Equals(FirstIndexValue), readValue: true).FirstOrDefault();
         #endregion
 
         #region "GetById"
         /// <summary>retreives the item by Row-Id.</summary>
-        public KeyValuePair<RowHeader, byte[]> GetRaw(int Id, bool Reverse = false) =>
-            Id == 0 ? default : reader(reverse: Reverse, match: rh => rh.Id == Id, readValue: true).FirstOrDefault();
-        /// <summary>retreives the item by Row-Id.</summary>
-        public KeyValuePair<RowHeader, T> Get<T>(int Id, bool Reverse = false) => toType<T>(GetRaw(Id, Reverse));
+        public Row<T> Get<T>(int Id, bool Reverse = false) =>
+            Id == 0 ? default : reader<T>(reverse: Reverse, match: rh => rh.Id == Id, readValue: true).FirstOrDefault();
+
+        /// <summary>retreives the item by RowHeader.</summary>
+        public Row<T> Get<T>(RowHeader rowHeader, bool Reverse = false) =>
+            rowHeader == null ? default : GetByPos<T>(rowHeader.Pos, Reverse);
+
+        /// <summary>retreives the item by searching on indexValues.</summary>
+        public Row<T> Get<T>(Predicate<object[]> match, bool Reverse = false) =>
+            match == null ? default : reader<T>(reverse: Reverse, match: rh => match(rh.IndexValues), readValue: true).FirstOrDefault();
         #endregion
 
         #region "GetByPos"
         /// <summary>retreives the item by the position of the item.</summary>
         /// <param name="Pos">is the position of the item.</param>
-        public KeyValuePair<RowHeader, byte[]> GetRawByPos(long Pos, bool Reverse = false) =>
-            Pos == 0 ? default : reader(reverse: Reverse, StartPos: Pos, readValue: true).FirstOrDefault();
-        /// <summary>retreives the item by the position of the item.</summary>
-        /// <param name="Pos">is the position of the item.</param>
-        public KeyValuePair<RowHeader, T> GetByPos<T>(long Pos, bool Reverse = false) => toType<T>(GetRawByPos(Pos, Reverse));
+        public Row<T> GetByPos<T>(long Pos, bool Reverse = false) =>
+            Pos == 0 ? default : reader<T>(reverse: Reverse, StartPos: Pos, readValue: true).FirstOrDefault();
         #endregion
 
-        #region "GetByRowHeader"
-        public KeyValuePair<RowHeader, byte[]> GetRaw(RowHeader rowHeader, bool Reverse = false) =>
-            rowHeader == null ? default : GetRawByPos(rowHeader.Pos, Reverse);
-        public KeyValuePair<RowHeader, T> Get<T>(RowHeader rowHeader, bool Reverse = false) => toType<T>(GetRaw(rowHeader, Reverse));
-        #endregion
 
         #region "GetFirst"
-        public KeyValuePair<RowHeader, byte[]> GetRawFirst() => GetRawByPos(FileHeader.Size);
-        public KeyValuePair<RowHeader, T> GetFirst<T>() => GetByPos<T>(FileHeader.Size);
+        public Row<T> GetFirst<T>() => GetByPos<T>(FileHeader.Size);
+        public Row<T> GetLast<T>() => GetByPos<T>(this.cw.fs_inx.Length - RowHeader.Size);
         #endregion
+        #region "GetAll"
+        /// <summary>Retrieves all the elements.</summary>
+        public IEnumerable<Row<T>> GetAll<T>(bool Reverse = false) =>
+            reader<T>(reverse: Reverse, readValue: true);
 
-        #region "GetLast"
-        public KeyValuePair<RowHeader, byte[]> GetRawLast() => GetRawByPos(this.cw.fs_inx.Length - RowHeader.Size);
-        public KeyValuePair<RowHeader, T> GetLast<T>() => GetByPos<T>(this.cw.fs_inx.Length - RowHeader.Size);
+        /// <summary>Retrieves all the elements by searching on indexValues.</summary>
+        public IEnumerable<Row<T>> GetAll<T>(Predicate<object[]> match, bool Reverse = false) =>
+            reader<T>(reverse: Reverse, readValue: true, match: rh => match(rh.IndexValues));
         #endregion
 
         #region "GetHeader(s)"
-        public IEnumerable<RowHeader> GetHeaders(bool Reverse = false) => from x in reader(reverse: Reverse) select x.Key;
+        public IEnumerable<RowHeader> GetHeaders(bool Reverse = false) => from x in reader<object>(reverse: Reverse) select x.Header;
 
         public RowHeader GetHeader(int Id) => GetHeaders().FirstOrDefault(row => row.Id == Id);
         public RowHeader GetHeaderByPos(long Pos) => GetHeaders().FirstOrDefault(row => row.Pos == Pos);
@@ -397,30 +379,6 @@ namespace KeyValue
         public bool ExistsByKey(object FirstIndexValue) => GetHeaderByIndex(FirstIndexValue) is object;
         #endregion
 
-        #region "GetAll"
-        /// <summary>Retrieves all the elements.</summary>
-        public IEnumerable<KeyValuePair<RowHeader, byte[]>> GetRawAll(bool Reverse = false) =>
-            from x in reader(reverse: Reverse, readValue: true) select x;
-
-        /// <summary>Retrieves all the elements.</summary>
-        public IEnumerable<KeyValuePair<RowHeader, T>> GetAll<T>(bool Reverse = false)
-        {
-            foreach (var row in GetRawAll(Reverse))
-                yield return KeyValuePair.Create(row.Key, Serializer.GetObject<T>(row.Value));
-        }
-        /// <summary>Retrieves all the elements by searching on indexValues.</summary>
-        public IEnumerable<KeyValuePair<RowHeader, byte[]>> GetRawAll(Predicate<object[]> match, bool Reverse = false) =>
-            from x
-            in reader(reverse: Reverse, match: rh => match(rh.IndexValues), readValue: true)
-            select x;
-
-        /// <summary>Retrieves all the elements by searching on indexValues.</summary>
-        public IEnumerable<KeyValuePair<RowHeader, T>> GetAll<T>(Predicate<object[]> match, bool Reverse = false)
-        {
-            foreach (var row in GetRawAll(match, Reverse))
-                yield return KeyValuePair.Create(row.Key, Serializer.GetObject<T>(row.Value));
-        }
-        #endregion
         #endregion
         #endregion
 
@@ -561,14 +519,14 @@ namespace KeyValue
             if (mc.HasExecutable == false) return retval;
 
             // if there are items other than [ADD], then operates [UPDATE / UPSERT / DELETE] items.
-            foreach (var row in reader(reverse: false, FileHeader.Size, null, false))  // iterate all rows
+            foreach (var row in reader<object>(reverse: false, FileHeader.Size, null, false))  // iterate all rows
                 foreach (var item in mc.Items)
-                    if (item.IsExec == false && item.match(row.Key))            // check the row
+                    if (item.IsExec == false && item.match(row.Header))            // check the row
                     {
                         if (item.IsUpdate || item.IsUpsert)
-                            WriterBegin(() => retval = writer_update(row.Key, item.Value, item.IndexValues));
+                            WriterBegin(() => retval = writer_update(row.Header, item.Value, item.IndexValues));
                         else if (item.IsDelete)
-                            WriterBegin(() => writer_delete(row.Key.Pos));
+                            WriterBegin(() => writer_delete(row.Header.Pos));
                         //WriteBegin(() => delete(row.Key));
 
                         item.IsExec = true;
@@ -595,8 +553,9 @@ namespace KeyValue
         #region "private methods for reading"
         private bool reader_is_lastRow(RowHeader rh) => (rh.Pos + RowHeader.Size) == this.cw.fs_inx.Length;
         private FileStream reader_new_stream(string nam) => new FileStream(nam, FileMode.OpenOrCreate, FileAccess.Read, FileShare.ReadWrite, 4096 * 4, FileOptions.SequentialScan);
-        private IEnumerable<KeyValuePair<RowHeader, byte[]>> reader(
-             bool reverse, long StartPos = -1, Predicate<RowHeader> match = null, bool readValue = false, bool readDeleted = false, bool CheckState = true)
+        private IEnumerable<Row<T>> reader<T>(
+             bool reverse, long StartPos = -1, Predicate<RowHeader> match = null,
+             bool readValue = false, bool readDeleted = false, bool CheckState = true)
         {
             if (CheckState) checkFileState(FileAccess.Read, FileState.Normal);
             if (IsOpen == false || this.fh.Count == 0) yield break;
@@ -615,11 +574,19 @@ namespace KeyValue
                     // macted rows is being returned with its value -if it was requested-
                     if ((readDeleted || rh.IsDeleted == false) &&
                         (match == null || match(rh)))
-                        yield return KeyValuePair.Create(rh, readValue ? reader_getValue(fs_dat, rh) : null);
-
+                    {
+                        var retval = new Row<T>() { Header = rh };
+                        if (readValue)
+                            if (typeof(T) == typeof(byte[]) || typeof(T) == typeof(object))
+                                retval.Data = (T)(object)reader_getValue(fs_dat, rh);
+                            else
+                                retval.Data = reader_getValue<T>(fs_dat, rh);
+                        yield return retval;
+                    }
                 }
             }
         }
+
         private IEnumerable<RowHeader> reader_forward(FileStream fs_inx, long StartPos = -1)
         {
             fs_inx.Position = StartPos;
@@ -627,7 +594,7 @@ namespace KeyValue
             var bytes = new byte[bufferLen];
             while (true)
             {
-                var lastIndex = fs_inx.Read(bytes);
+                var lastIndex = fs_inx.Read(bytes, 0, bufferLen);
                 if (lastIndex < RowHeader.Size) yield break;
 
                 var startIndex = 0;
@@ -691,12 +658,20 @@ namespace KeyValue
         }
         private byte[] reader_getValue(FileStream fs, RowHeader rh)
         {
-            if (fs.Position != rh.ValuePos)
-                fs.Position = rh.ValuePos;
+            if (fs.Position != rh.ValuePos) fs.Position = rh.ValuePos;
 
             var bytes = new byte[rh.ValueActualSize];
             fs.Read(bytes);
             return bytes;
+        }
+        private T reader_getValue<T>(FileStream fs, RowHeader rh)
+        {
+            if (fs.Position != rh.ValuePos) fs.Position = rh.ValuePos;
+
+            var bytes = new byte[rh.ValueActualSize];
+            fs.Read(bytes, 0, rh.ValueActualSize);
+            var retval = Serializer.GetObject<T>(bytes);
+            return retval;
         }
         #endregion
         #endregion

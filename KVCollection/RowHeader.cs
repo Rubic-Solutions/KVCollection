@@ -1,9 +1,14 @@
 ﻿using System;
-using System.IO;
 using System.Linq;
 
 namespace KeyValue
 {
+    public class Row<T>
+    {
+        public RowHeader Header;
+        public T Data;
+    }
+
     public class RowHeader
     {
         /// <summary>position of the RowHeader at index-file</summary>
