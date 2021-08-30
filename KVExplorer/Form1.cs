@@ -81,10 +81,45 @@ namespace KVExplorer
             var items = new List<KV.RowHeader>(1000);
             DoWorkResult result = null;
 
+            //long Count  = kvFile.Count(StartPos:256);
+
+            //// 1.3GB bellek tüketirken
+            //for (int i = 0; i < 3; i++)
+            //{
+            //    var itm = kvFile.GetAll<object>().ToList();
+            //}
+            //// 1.3GB bellek tüketiyor
+            //for (int i = 0; i < 3; i++)
+            //{
+            //    var itm = kvFile.GetAll<object>().ToList();
+            //}
+            //// 856MB bellek tüketiyor
+            //Count = 0;
+            //for (int i = 0; i < 3; i++)
+            //{
+            //    var itm_result = new List<KV.Row<object>>();
+            //    foreach (var item in kvFile.GetAll<object>())
+            //    {
+            //        itm_result.Add(item);
+            //    }
+            //}
+            result = await DoWork(() =>
+            {
+                if (kvFile.Count() == 0) return;
+                foreach (var item in kvFile.GetAll<object>())
+                {
+                    var itm = item.Data;
+                }
+
+            }, "All row(s) iterated with values.");
+            MessageAdd("\tCount = " + items.Count);
+            if (result.Success == false) return false;
+
+
             items.Clear();
             result = await DoWork(() =>
             {
-                if (kvFile.Count == 0) return;
+                if (kvFile.Count() == 0) return;
                 foreach (var item in kvFile.GetHeaders(true))
                     items.Add(item);
 
@@ -95,7 +130,7 @@ namespace KVExplorer
             items.Clear();
             result = await DoWork(() =>
             {
-                if (kvFile.Count == 0) return;
+                if (kvFile.Count() == 0) return;
                 foreach (var item in kvFile.GetHeaders())
                     items.Add(item);
 
@@ -106,7 +141,7 @@ namespace KVExplorer
             items.Clear();
             result = await DoWork(() =>
             {
-                if (kvFile.Count == 0) return;
+                if (kvFile.Count() == 0) return;
                 foreach (var item in kvFile.GetHeaders(true))
                     items.Add(item);
 
@@ -130,22 +165,22 @@ namespace KVExplorer
             var adult_count = 0;
             var dt = DateTime.Now.AddYears(-30);
             result = await DoWork(() =>
-                {
-                    foreach (var item in kvFile.GetAll<object>(x => (bool)x[1] && (DateTime)x[2] > dt))
                     {
-                        var i = item;
-                        adult_count++;
-                    }
-                }, "FindAll predicate search.");
+                        foreach (var item in kvFile.GetAll<object>(x => (bool)x[1] && (DateTime)x[2] > dt))
+                        {
+                            var i = item;
+                            adult_count++;
+                        }
+                    }, "FindAll predicate search.");
             MessageAdd("\tTotal " + adult_count + " adult(s) found.");
 
             var lastItem = kvFile.GetLast<object>();
             result = await DoWork(() =>
-                {
-                    var item = kvFile.Get<object>(lastItem.Header?.Id ?? 0);
-                    if (item.Header is object)
-                        MessageAdd("\tKey = " + item.Header.Id);
-                }, "ID FIND search.");
+                    {
+                        var item = kvFile.Get<object>(lastItem.Header?.Id ?? 0);
+                        if (item.Header is object)
+                            MessageAdd("\tKey = " + item.Header.Id);
+                    }, "ID FIND search.");
 
             result = await DoWork(() =>
                 {
@@ -269,11 +304,11 @@ namespace KVExplorer
         {
             var result = await DoWork(() =>
             {
-                //if (EDIT_IS_NEW)
-                //    kvFile.Add(EDIT_KEY.Text, KeyValue.Serializer.GetBytes(EDIT_VALUE.Text));
-                //else
-                //    kvFile.Update(EDIT_KEY.Text, KeyValue.Serializer.GetBytes(EDIT_VALUE.Text));
-            }, "Item has been saved.");
+            //if (EDIT_IS_NEW)
+            //    kvFile.Add(EDIT_KEY.Text, KeyValue.Serializer.GetBytes(EDIT_VALUE.Text));
+            //else
+            //    kvFile.Update(EDIT_KEY.Text, KeyValue.Serializer.GetBytes(EDIT_VALUE.Text));
+        }, "Item has been saved.");
         }
         private async void BTN_DEL_Click(object sender, EventArgs e)
         {
@@ -384,8 +419,8 @@ namespace KVExplorer
                     var msgIndex = MessageAdd(StatusText);
 
                     Application.DoEvents();
-                    //---------------------------------------
-                    sw.Restart();
+                //---------------------------------------
+                sw.Restart();
                     try
                     {
                         fn();
@@ -400,8 +435,8 @@ namespace KVExplorer
                     MESSAGE_LIST.SelectedIndex = MESSAGE_LIST.Items.Count - 1;
                     sw.Stop();
                     retval.Duration = sw.Elapsed;
-                    //---------------------------------------
-                    Cursor.Current = Cursors.Default;
+                //---------------------------------------
+                Cursor.Current = Cursors.Default;
                     Application.DoEvents();
                 }));
             });

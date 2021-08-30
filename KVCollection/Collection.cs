@@ -122,7 +122,6 @@ namespace KV
         #endregion
 
         #region "Public Operation Methods"
-        public long Count => this.fh.Count;
 
         public IndexerInfo GetIndexerInfo<T>()
         {
@@ -359,12 +358,24 @@ namespace KV
         #endregion
         #region "GetAll"
         /// <summary>Retrieves all the elements.</summary>
-        public IEnumerable<Row<T>> GetAll<T>(bool Reverse = false) =>
-            this.reader.Create<T>(reverse: Reverse, readValue: true);
+        public IEnumerable<Row<T>> GetAll<T>(bool Reverse = false, long StartPos = -1, int Skip = 0) =>
+            this.reader.Create<T>(reverse: Reverse, readValue: true, StartPos: StartPos, Skip: Skip);
 
         /// <summary>Retrieves all the elements by searching on indexValues.</summary>
-        public IEnumerable<Row<T>> GetAll<T>(Predicate<object[]> match, bool Reverse = false) =>
-            this.reader.Create<T>(reverse: Reverse, readValue: true, match: rh => match(rh.IndexValues));
+        public IEnumerable<Row<T>> GetAll<T>(Predicate<object[]> match, bool Reverse = false, long StartPos = -1, int Skip = 0) =>
+            this.reader.Create<T>(reverse: Reverse, readValue: true, StartPos: StartPos, Skip: Skip, match: rh => match(rh.IndexValues));
+        #endregion
+
+        #region "Count"
+        public long Count() => this.fh.Count;
+
+        /// <summary>Retrieves all the elements by searching on indexValues.</summary>
+        public long Count(long StartPos = -1, int Skip = 0) =>
+            this.reader.Count(StartPos: StartPos, Skip: Skip);
+
+        /// <summary>Retrieves all the elements by searching on indexValues.</summary>
+        public long Count(Predicate<object[]> match, long StartPos = -1, int Skip = 0) =>
+            this.reader.Count(StartPos: StartPos, Skip: Skip, match: rh => match(rh.IndexValues));
         #endregion
 
         #region "GetHeader(s)"
@@ -526,7 +537,7 @@ namespace KV
             if (mc.HasExecutable == false) return retval;
 
             // if there are items other than [ADD], then operates [UPDATE / UPSERT / DELETE] items.
-            foreach (var row in this.reader.Create<object>(reverse: false, FileHeader.Size, null, false))  // iterate all rows
+            foreach (var row in this.reader.Create<object>(reverse: false, FileHeader.Size, null, readValue: false))  // iterate all rows
                 foreach (var item in mc.Items)
                     if (item.IsExec == false && item.match(row.Header))            // check the row
                     {

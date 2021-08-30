@@ -39,6 +39,7 @@ namespace KV
             }
             return true;
         }
+
         internal byte[] ToArray()
         {
             if (Id == 0)
