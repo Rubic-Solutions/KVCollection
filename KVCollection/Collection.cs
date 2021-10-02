@@ -128,6 +128,7 @@ namespace KV
             var retval = CollectionIndexer.Get<T>();
             if (retval == null) throw new Exception("There is no collection index information for " + typeof(T).FullName + ".");
             if (retval.index_value_getter_fns.Count == 0) throw new Exception("At least one index info must be specified by " + nameof(Indexer<T>.EnsureIndex) + " for " + typeof(T).FullName + ".");
+            if (retval.index_value_getter_fns.Count == 0) throw new Exception("At least one index info must be specified by " + nameof(Indexer<T>.EnsureIndex) + " for " + typeof(T).FullName + ".");
             return retval;
         }
 
@@ -240,7 +241,7 @@ namespace KV
         /// <summary>Deletes the item by the [first index value]. If the item does not exist, nothing deleted.</summary>
         public void DeleteByKey(object FirstIndexValue) => DeleteMany(new[] { FirstIndexValue });
         /// <summary>Deletes the item by the [first index value]. If the item does not exist, nothing deleted.</summary>
-        public void DeleteByKey(IEnumerable<object> FirstIndexValues) => writer_multi(mc =>
+        public void DeleteManyByKey(IEnumerable<object> FirstIndexValues) => writer_multi(mc =>
         {
             foreach (var FirstIndexValue in FirstIndexValues)
                 mc.Delete(rh => rh.IndexValues[0].Equals(FirstIndexValue));
